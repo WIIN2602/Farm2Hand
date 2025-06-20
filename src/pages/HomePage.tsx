@@ -1,7 +1,128 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquare, ShoppingBag, Users, TrendingUp, Star, ArrowRight, Leaf, Shield, Truck } from 'lucide-react';
+import { MessageSquare, ShoppingBag, Users, TrendingUp, Star, ArrowRight, Leaf, Shield, Truck, Heart, MapPin, Package, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  unit: string;
+  image: string;
+  farmer: string;
+  location: string;
+  rating: number;
+  reviews: number;
+  inStock: boolean;
+  category: string;
+  organic: boolean;
+  discount?: number;
+  tags: string[];
+}
+
+const featuredProducts: Product[] = [
+  {
+    id: 1,
+    name: 'มะม่วงน้ำดอกไม้',
+    price: 120,
+    unit: 'กก.',
+    image: 'https://images.pexels.com/photos/2294471/pexels-photo-2294471.jpeg?auto=compress&cs=tinysrgb&w=400',
+    farmer: 'นายสมชาย ใจดี',
+    location: 'จ.เชียงใหม่',
+    rating: 4.8,
+    reviews: 156,
+    inStock: true,
+    category: 'ผลไม้',
+    organic: true,
+    discount: 10,
+    tags: ['หวาน', 'สดใหม่', 'ออร์แกนิค']
+  },
+  {
+    id: 2,
+    name: 'ผักกาดหอมออร์แกนิค',
+    price: 45,
+    unit: 'ถุง',
+    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
+    farmer: 'นายวิชัย ผักสด',
+    location: 'จ.เลย',
+    rating: 4.9,
+    reviews: 203,
+    inStock: true,
+    category: 'ผักใบเขียว',
+    organic: true,
+    tags: ['ปลอดสารพิษ', 'สดใหม่', 'ออร์แกนิค']
+  },
+  {
+    id: 3,
+    name: 'มะเขือเทศราชินี',
+    price: 80,
+    unit: 'กก.',
+    image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=400',
+    farmer: 'นายประสิทธิ์ เกษตรกร',
+    location: 'จ.นครปฐม',
+    rating: 4.7,
+    reviews: 89,
+    inStock: true,
+    category: 'ผัก',
+    organic: false,
+    tags: ['หวาน', 'สดใหม่', 'คุณภาพดี']
+  },
+  {
+    id: 4,
+    name: 'กล้วยหอมทอง',
+    price: 60,
+    unit: 'หวี',
+    image: 'https://images.pexels.com/photos/2872755/pexels-photo-2872755.jpeg?auto=compress&cs=tinysrgb&w=400',
+    farmer: 'นายสมชาย ใจดี',
+    location: 'จ.เชียงใหม่',
+    rating: 4.6,
+    reviews: 124,
+    inStock: true,
+    category: 'ผลไม้',
+    organic: false,
+    discount: 5,
+    tags: ['หวาน', 'สุกพอดี', 'หอม']
+  },
+  {
+    id: 5,
+    name: 'แครอทเบบี้',
+    price: 95,
+    unit: 'กก.',
+    image: 'https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=400',
+    farmer: 'นายวิชัย ผักสด',
+    location: 'จ.เลย',
+    rating: 4.8,
+    reviews: 167,
+    inStock: true,
+    category: 'ผัก',
+    organic: true,
+    tags: ['หวาน', 'กรอบ', 'ออร์แกนิค']
+  },
+  {
+    id: 6,
+    name: 'ข้าวหอมมะลิ',
+    price: 45,
+    unit: 'กก.',
+    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
+    farmer: 'นายประสิทธิ์ เกษตรกร',
+    location: 'จ.นครปฐม',
+    rating: 4.9,
+    reviews: 245,
+    inStock: true,
+    category: 'ข้าว',
+    organic: false,
+    tags: ['หอม', 'หวาน', 'เก็บใหม่']
+  }
+];
+
+const categories = [
+  { name: 'ผลไม้', icon: '🍎', count: 25, color: 'bg-red-100 text-red-700' },
+  { name: 'ผัก', icon: '🥕', count: 32, color: 'bg-orange-100 text-orange-700' },
+  { name: 'ผักใบเขียว', icon: '🥬', count: 18, color: 'bg-green-100 text-green-700' },
+  { name: 'ข้าว', icon: '🌾', count: 12, color: 'bg-yellow-100 text-yellow-700' },
+  { name: 'ไข่', icon: '🥚', count: 8, color: 'bg-blue-100 text-blue-700' },
+  { name: 'สมุนไพร', icon: '🌿', count: 15, color: 'bg-emerald-100 text-emerald-700' }
+];
 
 export const HomePage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -40,6 +161,113 @@ export const HomePage: React.FC = () => {
     { number: '4.8', label: 'คะแนนเฉลี่ย', icon: Star }
   ];
 
+  const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
+    const discountedPrice = product.discount 
+      ? product.price * (1 - product.discount / 100)
+      : product.price;
+
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-border-beige overflow-hidden hover:shadow-lg transition-all duration-300 group">
+        {/* Product Image */}
+        <div className="relative h-48 overflow-hidden">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          
+          {/* Badges */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {product.organic && (
+              <span className="px-2 py-1 bg-nature-green text-white text-xs font-medium rounded-full">
+                ออร์แกนิค
+              </span>
+            )}
+            {product.discount && (
+              <span className="px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
+                -{product.discount}%
+              </span>
+            )}
+          </div>
+
+          {/* Favorite Button */}
+          {isAuthenticated && user?.role === 'customer' && (
+            <button className="absolute top-2 right-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center transition-colors duration-200 opacity-0 group-hover:opacity-100">
+              <Heart className="w-4 h-4 text-cool-gray hover:text-red-500" />
+            </button>
+          )}
+        </div>
+
+        {/* Product Info */}
+        <div className="p-4">
+          {/* Product Name */}
+          <h3 className="font-semibold text-nature-dark-green mb-2 line-clamp-2">
+            {product.name}
+          </h3>
+
+          {/* Price */}
+          <div className="flex items-center gap-2 mb-2">
+            {product.discount ? (
+              <>
+                <span className="text-lg font-bold text-fresh-orange">
+                  ฿{discountedPrice.toFixed(0)}
+                </span>
+                <span className="text-sm text-cool-gray line-through">
+                  ฿{product.price}
+                </span>
+              </>
+            ) : (
+              <span className="text-lg font-bold text-fresh-orange">
+                ฿{product.price}
+              </span>
+            )}
+            <span className="text-sm text-cool-gray">/{product.unit}</span>
+          </div>
+
+          {/* Farmer & Location */}
+          <div className="text-sm text-cool-gray mb-2">
+            <p className="truncate">{product.farmer}</p>
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" />
+              <span>{product.location}</span>
+            </div>
+          </div>
+
+          {/* Rating & Reviews */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1">
+              <Star className="w-4 h-4 fill-sun-yellow text-sun-yellow" />
+              <span className="text-sm font-medium text-cool-gray">
+                {product.rating} ({product.reviews})
+              </span>
+            </div>
+            <span className="text-xs px-2 py-1 bg-nature-green/10 text-nature-dark-green rounded-full">
+              {product.category}
+            </span>
+          </div>
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1 mb-3">
+            {product.tags.slice(0, 2).map((tag, index) => (
+              <span
+                key={index}
+                className="text-xs px-2 py-1 bg-soft-beige text-nature-brown rounded-full"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          {/* Action Button */}
+          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg font-medium transition-colors duration-200">
+            <ShoppingBag className="w-4 h-4" />
+            เพิ่มในตะกร้า
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -70,17 +298,20 @@ export const HomePage: React.FC = () => {
             {!isAuthenticated ? (
               <>
                 <Link
-                  to="/chatbot"
+                  to="/products"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  เลือกซื้อสินค้า
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  to="/chatbot"
+                  className="inline-flex items-center gap-2 px-8 py-4 border-2 border-nature-green text-nature-green hover:bg-nature-green hover:text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   <MessageSquare className="w-5 h-5" />
                   ลองใช้ AI Assistant
-                  <ArrowRight className="w-4 h-4" />
                 </Link>
-                <button className="inline-flex items-center gap-2 px-8 py-4 border-2 border-nature-green text-nature-green hover:bg-nature-green hover:text-white rounded-lg font-medium transition-colors duration-200">
-                  <Users className="w-5 h-5" />
-                  เริ่มต้นใช้งาน
-                </button>
               </>
             ) : (
               <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
@@ -89,11 +320,11 @@ export const HomePage: React.FC = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Link
-                    to="/profile"
+                    to="/products"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg font-medium transition-colors duration-200"
                   >
-                    <Users className="w-4 h-4" />
-                    ดูโปรไฟล์
+                    <ShoppingBag className="w-4 h-4" />
+                    เลือกซื้อสินค้า
                   </Link>
                   <Link
                     to="/chatbot"
@@ -123,6 +354,80 @@ export const HomePage: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Product Categories Section */}
+      <section className="py-16 px-4 bg-white/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-nature-dark-green mb-4">
+              หมวดหมู่สินค้า
+            </h2>
+            <p className="text-lg text-cool-gray max-w-2xl mx-auto">
+              เลือกซื้อสินค้าเกษตรคุณภาพดีจากหมวดหมู่ที่หลากหลาย
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            {categories.map((category, index) => (
+              <Link
+                key={index}
+                to="/products"
+                className="bg-white rounded-xl p-6 shadow-sm border border-border-beige hover:shadow-lg transition-all duration-300 text-center group"
+              >
+                <div className="text-4xl mb-3">{category.icon}</div>
+                <h3 className="font-semibold text-nature-dark-green mb-2 group-hover:text-nature-green transition-colors">
+                  {category.name}
+                </h3>
+                <span className={`text-xs px-2 py-1 rounded-full ${category.color}`}>
+                  {category.count} สินค้า
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg font-medium transition-colors duration-200"
+            >
+              <Search className="w-4 h-4" />
+              ดูสินค้าทั้งหมด
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products Section */}
+      <section className="py-16 px-4 bg-gradient-to-br from-soft-beige to-light-beige">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-nature-dark-green mb-4">
+              สินค้าแนะนำ
+            </h2>
+            <p className="text-lg text-cool-gray max-w-2xl mx-auto">
+              สินค้าเกษตรคุณภาพดีที่ได้รับความนิยมจากลูกค้า
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+
+          <div className="text-center">
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Package className="w-5 h-5" />
+              ดูสินค้าทั้งหมด
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>
@@ -177,11 +482,11 @@ export const HomePage: React.FC = () => {
                 สมัครสมาชิก
               </button>
               <Link
-                to="/chatbot"
+                to="/products"
                 className="inline-flex items-center gap-2 px-8 py-4 border-2 border-white text-white hover:bg-white hover:text-nature-green rounded-lg font-medium transition-colors duration-200"
               >
-                <MessageSquare className="w-5 h-5" />
-                ทดลองใช้ AI Assistant
+                <ShoppingBag className="w-5 h-5" />
+                เลือกซื้อสินค้า
               </Link>
             </div>
           )}
