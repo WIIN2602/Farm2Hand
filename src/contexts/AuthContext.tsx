@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authService } from '../services/authService';
+import { customerService } from '../services/customerService';
 import type { UserProfile } from '../lib/supabase';
 import type { User, AuthState, LoginCredentials, RegisterData } from '../types/auth';
 
@@ -78,6 +79,25 @@ const convertProfileToUser = (profile: UserProfile): User => {
   };
 };
 
+// Initialize customer data if it doesn't exist
+const initializeCustomerData = async (userId: number): Promise<void> => {
+  try {
+    const existingData = await customerService.getCustomerData(userId);
+    
+    if (!existingData) {
+      // Create initial customer data with empty arrays
+      await customerService.createCustomerData(userId, {
+        favorites: [],
+        following: []
+      });
+      console.log('Initialized customer data for user:', userId);
+    }
+  } catch (error) {
+    console.error('Failed to initialize customer data:', error);
+    // Don't throw error here as it shouldn't block login
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
@@ -89,9 +109,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const user = JSON.parse(storedUser);
         // Verify user still exists in database
         authService.getUserById(user.id)
-          .then((profile) => {
+          .then(async (profile) => {
             if (profile) {
               const updatedUser = convertProfileToUser(profile);
+              
+              // Initialize customer data if user is a customer
+              if (updatedUser.role === 'customer') {
+                await initializeCustomerData(updatedUser.id);
+              }
+              
               dispatch({ type: 'AUTH_SUCCESS', payload: updatedUser });
             } else {
               localStorage.removeItem('farm2hand_user');
@@ -113,6 +139,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const profile = await authService.login(credentials);
       const user = convertProfileToUser(profile);
       
+      // Initialize customer data if user is a customer
+      if (user.role === 'customer') {
+        await initializeCustomerData(user.id);
+      }
+      
       // Store user data
       localStorage.setItem('farm2hand_user', JSON.stringify(user));
       dispatch({ type: 'AUTH_SUCCESS', payload: user });
@@ -129,6 +160,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await authService.register(data);
       const user = convertProfileToUser(profile);
+
+      // Initialize customer data if user is a customer
+      if (user.role === 'customer') {
+        await initializeCustomerData(user.id);
+      }
 
       // Store user data
       localStorage.setItem('farm2hand_user', JSON.stringify(user));
