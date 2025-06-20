@@ -6,6 +6,7 @@ import { ChatbotPopup } from './components/ChatbotPopup';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ChatbotPage } from './pages/ChatbotPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ProductsPage } from './pages/ProductsPage';
 import { HomePage } from './pages/HomePage';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Navigation />
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/products" element={<ProductsPage />} />
           <Route 
             path="/profile" 
             element={

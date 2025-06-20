@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { User, LogIn, LogOut, ChevronDown } from 'lucide-react';
+import { User, LogIn, LogOut, ChevronDown, Package } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginModal } from './LoginModal';
 import { RegisterModal } from './RegisterModal';
@@ -29,6 +29,12 @@ export const Navigation: React.FC = () => {
 
   const navItems = [
     {
+      path: '/products',
+      label: 'Products',
+      icon: Package,
+      requireAuth: false
+    },
+    {
       path: '/profile',
       label: 'Profile',
       icon: User,
@@ -55,6 +61,30 @@ export const Navigation: React.FC = () => {
 
             {/* Navigation Items */}
             <div className="flex items-center space-x-1">
+              {/* Main Navigation Items */}
+              {navItems.map((item) => {
+                const IconComponent = item.icon;
+                const isActive = location.pathname === item.path || 
+                                (location.pathname === '/' && item.path === '/profile');
+                
+                if (item.requireAuth && !isAuthenticated) return null;
+                
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                      isActive
+                        ? 'bg-nature-green text-white'
+                        : 'text-white/80 hover:text-white hover:bg-nature-green/20'
+                    }`}
+                  >
+                    <IconComponent className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
               {/* Authentication Section */}
               {!isAuthenticated ? (
                 <div className="flex items-center gap-2">
@@ -74,30 +104,6 @@ export const Navigation: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {/* Authenticated Navigation Items */}
-                  {navItems.map((item) => {
-                    const IconComponent = item.icon;
-                    const isActive = location.pathname === item.path || 
-                                    (location.pathname === '/' && item.path === '/profile');
-                    
-                    if (item.requireAuth && !isAuthenticated) return null;
-                    
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
-                          isActive
-                            ? 'bg-nature-green text-white'
-                            : 'text-white/80 hover:text-white hover:bg-nature-green/20'
-                        }`}
-                      >
-                        <IconComponent className="w-4 h-4" />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-
                   {/* User Menu */}
                   <div className="relative">
                     <button
