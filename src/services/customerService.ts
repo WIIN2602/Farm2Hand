@@ -35,17 +35,19 @@ export const customerService = {
         .from('Farm2Hand_customer_data')
         .select('*')
         .eq('id_user', userId)
-        .single();
+        .limit(1);
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          return null; // No data found
-        }
         console.error('Database error:', error);
         throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูลลูกค้า');
       }
 
-      return convertToCustomerData(data as Farm2HandCustomerData);
+      // Check if data array is empty (no customer data found)
+      if (!data || data.length === 0) {
+        return null;
+      }
+
+      return convertToCustomerData(data[0] as Farm2HandCustomerData);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
