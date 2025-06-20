@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus, Heart, UserPlus, ShoppingBag, Loader2 } from 'lucide-react';
+import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus, Heart, UserPlus, ShoppingBag, Loader2, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { customerService, type CustomerData } from '../services/customerService';
+import { SearchModal } from '../components/SearchModal';
 
 interface FarmerProfile {
   id: string;
@@ -58,6 +59,8 @@ export const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [loadingCustomerData, setLoadingCustomerData] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchType, setSearchType] = useState<'favorites' | 'following'>('favorites');
   const [editedProfile, setEditedProfile] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -165,6 +168,15 @@ export const ProfilePage: React.FC = () => {
     } catch (error) {
       console.error('Failed to unfollow farmer:', error);
     }
+  };
+
+  const handleOpenSearch = (type: 'favorites' | 'following') => {
+    setSearchType(type);
+    setShowSearchModal(true);
+  };
+
+  const handleSearchModalUpdate = () => {
+    loadCustomerData(); // Reload customer data when search modal updates
   };
 
   const currentProfile = isEditing ? { ...profile, ...editedProfile } : profile;
@@ -353,7 +365,16 @@ export const ProfilePage: React.FC = () => {
             {/* Customer Favorites */}
             {user?.role === 'customer' && (
               <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6">
-                <h2 className="text-xl font-semibold text-nature-dark-green mb-4">รายการโปรด</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-nature-dark-green">รายการโปรด</h2>
+                  <button
+                    onClick={() => handleOpenSearch('favorites')}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200"
+                  >
+                    <Search className="w-4 h-4" />
+                    <span className="font-medium">ค้นหาสินค้า</span>
+                  </button>
+                </div>
                 
                 {loadingCustomerData ? (
                   <div className="flex items-center justify-center py-8">
@@ -380,8 +401,15 @@ export const ProfilePage: React.FC = () => {
                 ) : (
                   <div className="text-center py-8">
                     <Heart className="w-12 h-12 text-cool-gray/30 mx-auto mb-3" />
-                    <p className="text-cool-gray">ยังไม่มีรายการโปรด</p>
-                    <p className="text-sm text-cool-gray/70">เริ่มเลือกสินค้าที่คุณชอบเพื่อเพิ่มในรายการโปรด</p>
+                    <p className="text-cool-gray mb-2">ยังไม่มีรายการโปรด</p>
+                    <p className="text-sm text-cool-gray/70 mb-4">เริ่มเลือกสินค้าที่คุณชอบเพื่อเพิ่มในรายการโปรด</p>
+                    <button
+                      onClick={() => handleOpenSearch('favorites')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200"
+                    >
+                      <Search className="w-4 h-4" />
+                      ค้นหาสินค้า
+                    </button>
                   </div>
                 )}
               </div>
@@ -390,7 +418,16 @@ export const ProfilePage: React.FC = () => {
             {/* Customer Following */}
             {user?.role === 'customer' && (
               <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6">
-                <h2 className="text-xl font-semibold text-nature-dark-green mb-4">เกษตรกรที่ติดตาม</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-nature-dark-green">เกษตรกรที่ติดตาม</h2>
+                  <button
+                    onClick={() => handleOpenSearch('following')}
+                    className="flex items-center gap-2 px-4 py-2 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg transition-colors duration-200"
+                  >
+                    <Search className="w-4 h-4" />
+                    <span className="font-medium">ค้นหาเกษตรกร</span>
+                  </button>
+                </div>
                 
                 {loadingCustomerData ? (
                   <div className="flex items-center justify-center py-8">
@@ -417,8 +454,15 @@ export const ProfilePage: React.FC = () => {
                 ) : (
                   <div className="text-center py-8">
                     <UserPlus className="w-12 h-12 text-cool-gray/30 mx-auto mb-3" />
-                    <p className="text-cool-gray">ยังไม่ได้ติดตามเกษตรกรใดๆ</p>
-                    <p className="text-sm text-cool-gray/70">ค้นหาและติดตามเกษตรกรที่คุณสนใจ</p>
+                    <p className="text-cool-gray mb-2">ยังไม่ได้ติดตามเกษตรกรใดๆ</p>
+                    <p className="text-sm text-cool-gray/70 mb-4">ค้นหาและติดตามเกษตรกรที่คุณสนใจ</p>
+                    <button
+                      onClick={() => handleOpenSearch('following')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg transition-colors duration-200"
+                    >
+                      <Search className="w-4 h-4" />
+                      ค้นหาเกษตรกร
+                    </button>
                   </div>
                 )}
               </div>
@@ -597,12 +641,18 @@ export const ProfilePage: React.FC = () => {
                       <span className="text-nature-dark-green">ประวัติการสั่งซื้อ</span>
                     </button>
                     
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
+                    <button 
+                      onClick={() => handleOpenSearch('favorites')}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200"
+                    >
                       <Heart className="w-5 h-5 text-red-500" />
                       <span className="text-nature-dark-green">รายการโปรด ({customerData?.favorites.length || 0})</span>
                     </button>
                     
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
+                    <button 
+                      onClick={() => handleOpenSearch('following')}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200"
+                    >
                       <UserPlus className="w-5 h-5 text-nature-green" />
                       <span className="text-nature-dark-green">เกษตรกรที่ติดตาม ({customerData?.following.length || 0})</span>
                     </button>
@@ -613,6 +663,14 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        type={searchType}
+        onUpdate={handleSearchModalUpdate}
+      />
     </div>
   );
 };
