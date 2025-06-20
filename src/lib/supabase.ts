@@ -31,3 +31,23 @@ export interface UserProfile {
   Address?: string;
   created_at: string;
 }
+
+// Customer data table type
+export interface Farm2HandCustomerData {
+  session_id: number;
+  id_user: number;
+  favorites: string | null;
+  following: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Customer data for frontend use
+export interface CustomerData {
+  sessionId: number;
+  userId: number;
+  favorites: string[];
+  following: string[];
+  createdAt: string;
+  updatedAt: string;
+}

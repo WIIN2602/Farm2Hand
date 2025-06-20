@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus, Heart, UserPlus, ShoppingBag, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { customerService, type CustomerData } from '../services/customerService';
 
 interface FarmerProfile {
   id: string;
@@ -55,6 +56,8 @@ const mockProducts = [
 export const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [customerData, setCustomerData] = useState<CustomerData | null>(null);
+  const [loadingCustomerData, setLoadingCustomerData] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -62,9 +65,30 @@ export const ProfilePage: React.FC = () => {
     farmName: user?.farmName || '',
   });
 
+  // Load customer data for customers
+  useEffect(() => {
+    if (user?.role === 'customer') {
+      loadCustomerData();
+    }
+  }, [user]);
+
+  const loadCustomerData = async () => {
+    if (!user) return;
+    
+    setLoadingCustomerData(true);
+    try {
+      const data = await customerService.getCustomerData(user.id);
+      setCustomerData(data);
+    } catch (error) {
+      console.error('Failed to load customer data:', error);
+    } finally {
+      setLoadingCustomerData(false);
+    }
+  };
+
   // Mock profile data based on user role
   const mockFarmerProfile: FarmerProfile = {
-    id: user?.id || '1',
+    id: user?.id?.toString() || '1',
     name: user?.name || 'นายสมชาย ใจดี',
     email: user?.email || 'farmer@farm2hand.com',
     phone: user?.phone || '081-234-5678',
@@ -119,6 +143,28 @@ export const ProfilePage: React.FC = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleRemoveFavorite = async (favoriteItem: string) => {
+    if (!user) return;
+    
+    try {
+      const updatedData = await customerService.removeFavorite(user.id, favoriteItem);
+      setCustomerData(updatedData);
+    } catch (error) {
+      console.error('Failed to remove favorite:', error);
+    }
+  };
+
+  const handleUnfollowFarmer = async (farmerName: string) => {
+    if (!user) return;
+    
+    try {
+      const updatedData = await customerService.unfollowFarmer(user.id, farmerName);
+      setCustomerData(updatedData);
+    } catch (error) {
+      console.error('Failed to unfollow farmer:', error);
+    }
   };
 
   const currentProfile = isEditing ? { ...profile, ...editedProfile } : profile;
@@ -240,6 +286,35 @@ export const ProfilePage: React.FC = () => {
                 </div>
               )}
 
+              {/* Customer Stats */}
+              {user?.role === 'customer' && customerData && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                      <span className="font-bold text-nature-dark-green">{customerData.favorites.length}</span>
+                    </div>
+                    <p className="text-xs text-cool-gray">รายการโปรด</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <UserPlus className="w-4 h-4 text-nature-green" />
+                      <span className="font-bold text-nature-dark-green">{customerData.following.length}</span>
+                    </div>
+                    <p className="text-xs text-cool-gray">กำลังติดตาม</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Calendar className="w-4 h-4 text-nature-brown" />
+                      <span className="font-bold text-nature-dark-green text-xs">
+                        {new Date(customerData.createdAt).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-cool-gray">เริ่มใช้งาน</p>
+                  </div>
+                </div>
+              )}
+
               {/* Contact Info */}
               <div className="flex flex-wrap gap-4 text-sm text-cool-gray">
                 <div className="flex items-center gap-1">
@@ -272,6 +347,80 @@ export const ProfilePage: React.FC = () => {
               <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6">
                 <h2 className="text-xl font-semibold text-nature-dark-green mb-4">เกี่ยวกับฟาร์ม</h2>
                 <p className="text-nature-dark-green leading-relaxed">{currentProfile.bio}</p>
+              </div>
+            )}
+
+            {/* Customer Favorites */}
+            {user?.role === 'customer' && (
+              <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6">
+                <h2 className="text-xl font-semibold text-nature-dark-green mb-4">รายการโปรด</h2>
+                
+                {loadingCustomerData ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-nature-green" />
+                    <span className="ml-2 text-cool-gray">กำลังโหลด...</span>
+                  </div>
+                ) : customerData && customerData.favorites.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {customerData.favorites.map((favorite, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-soft-beige/30 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                          <span className="text-nature-dark-green font-medium">{favorite}</span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFavorite(favorite)}
+                          className="text-cool-gray hover:text-red-500 transition-colors duration-200"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Heart className="w-12 h-12 text-cool-gray/30 mx-auto mb-3" />
+                    <p className="text-cool-gray">ยังไม่มีรายการโปรด</p>
+                    <p className="text-sm text-cool-gray/70">เริ่มเลือกสินค้าที่คุณชอบเพื่อเพิ่มในรายการโปรด</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Customer Following */}
+            {user?.role === 'customer' && (
+              <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6">
+                <h2 className="text-xl font-semibold text-nature-dark-green mb-4">เกษตรกรที่ติดตาม</h2>
+                
+                {loadingCustomerData ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-nature-green" />
+                    <span className="ml-2 text-cool-gray">กำลังโหลด...</span>
+                  </div>
+                ) : customerData && customerData.following.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {customerData.following.map((farmerName, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-nature-green/10 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="w-4 h-4 text-nature-green" />
+                          <span className="text-nature-dark-green font-medium">{farmerName}</span>
+                        </div>
+                        <button
+                          onClick={() => handleUnfollowFarmer(farmerName)}
+                          className="text-cool-gray hover:text-red-500 transition-colors duration-200"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <UserPlus className="w-12 h-12 text-cool-gray/30 mx-auto mb-3" />
+                    <p className="text-cool-gray">ยังไม่ได้ติดตามเกษตรกรใดๆ</p>
+                    <p className="text-sm text-cool-gray/70">ค้นหาและติดตามเกษตรกรที่คุณสนใจ</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -341,31 +490,6 @@ export const ProfilePage: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Customer specific content */}
-            {user?.role === 'customer' && (
-              <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6">
-                <h2 className="text-xl font-semibold text-nature-dark-green mb-4">ข้อมูลส่วนตัว</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-cool-gray mb-1">ชื่อ-นามสกุล</label>
-                    <p className="text-nature-dark-green">{currentProfile.name}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-cool-gray mb-1">อีเมล</label>
-                    <p className="text-nature-dark-green">{currentProfile.email}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-cool-gray mb-1">เบอร์โทรศัพท์</label>
-                    <p className="text-nature-dark-green">{currentProfile.phone || 'ยังไม่ได้ระบุ'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-cool-gray mb-1">ที่อยู่</label>
-                    <p className="text-nature-dark-green">{currentProfile.location || 'ยังไม่ได้ระบุ'}</p>
-                  </div>
                 </div>
               </div>
             )}
@@ -469,18 +593,18 @@ export const ProfilePage: React.FC = () => {
                 ) : (
                   <>
                     <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
-                      <Package className="w-5 h-5 text-fresh-orange" />
+                      <ShoppingBag className="w-5 h-5 text-fresh-orange" />
                       <span className="text-nature-dark-green">ประวัติการสั่งซื้อ</span>
                     </button>
                     
                     <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
-                      <Star className="w-5 h-5 text-sun-yellow" />
-                      <span className="text-nature-dark-green">รายการโปรด</span>
+                      <Heart className="w-5 h-5 text-red-500" />
+                      <span className="text-nature-dark-green">รายการโปรด ({customerData?.favorites.length || 0})</span>
                     </button>
                     
                     <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
-                      <Users className="w-5 h-5 text-nature-brown" />
-                      <span className="text-nature-dark-green">เกษตรกรที่ติดตาม</span>
+                      <UserPlus className="w-5 h-5 text-nature-green" />
+                      <span className="text-nature-dark-green">เกษตรกรที่ติดตาม ({customerData?.following.length || 0})</span>
                     </button>
                   </>
                 )}
