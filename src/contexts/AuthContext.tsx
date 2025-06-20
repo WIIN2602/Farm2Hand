@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { authService } from '../services/authService';
+import type { UserProfile } from '../lib/supabase';
 import type { User, AuthState, LoginCredentials, RegisterData } from '../types/auth';
 
 interface AuthContextType extends AuthState {
@@ -58,32 +60,23 @@ const initialState: AuthState = {
   error: null,
 };
 
-// Mock users for demonstration
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'farmer@farm2hand.com',
-    name: 'นายสมชาย ใจดี',
-    role: 'farmer',
-    phone: '081-234-5678',
-    location: 'จ.เชียงใหม่, อ.แม่ริม',
-    farmName: 'สวนออร์แกนิคสมชาย',
-    isVerified: true,
-    createdAt: new Date('2023-01-15'),
-    avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=300'
-  },
-  {
-    id: '2',
-    email: 'customer@farm2hand.com',
-    name: 'นางสาวมาลี สุขใจ',
-    role: 'customer',
-    phone: '082-345-6789',
-    location: 'กรุงเทพมหานคร',
-    isVerified: true,
-    createdAt: new Date('2023-02-20'),
-    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=300'
-  }
-];
+// Convert UserProfile to User type
+const convertProfileToUser = (profile: UserProfile): User => {
+  return {
+    id: profile.id,
+    email: profile.Email,
+    name: profile.Name,
+    role: profile.role,
+    phone: profile.Phone,
+    location: profile.Address,
+    farmName: profile.role === 'farmer' ? `ฟาร์ม${profile.Name}` : undefined,
+    isVerified: true, // Default to verified for now
+    createdAt: new Date(profile.created_at),
+    avatar: profile.role === 'farmer' 
+      ? 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=300'
+      : 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=300'
+  };
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -94,7 +87,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
-        dispatch({ type: 'AUTH_SUCCESS', payload: user });
+        // Verify user still exists in database
+        authService.getUserById(user.id)
+          .then((profile) => {
+            if (profile) {
+              const updatedUser = convertProfileToUser(profile);
+              dispatch({ type: 'AUTH_SUCCESS', payload: updatedUser });
+            } else {
+              localStorage.removeItem('farm2hand_user');
+            }
+          })
+          .catch(() => {
+            localStorage.removeItem('farm2hand_user');
+          });
       } catch (error) {
         localStorage.removeItem('farm2hand_user');
       }
@@ -105,27 +110,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'AUTH_START' });
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Find user by email
-      const user = mockUsers.find(u => u.email === credentials.email);
+      const profile = await authService.login(credentials);
+      const user = convertProfileToUser(profile);
       
-      if (!user) {
-        throw new Error('ไม่พบผู้ใช้งานนี้ในระบบ');
-      }
-
-      // In a real app, you would verify the password here
-      // For demo purposes, we'll accept any password
-      if (credentials.password.length < 6) {
-        throw new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
-      }
-
       // Store user data
       localStorage.setItem('farm2hand_user', JSON.stringify(user));
       dispatch({ type: 'AUTH_SUCCESS', payload: user });
     } catch (error) {
-      dispatch({ type: 'AUTH_ERROR', payload: error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' });
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       throw error;
     }
   };
@@ -134,48 +127,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'AUTH_START' });
 
     try {
-      // Validate data
-      if (data.password !== data.confirmPassword) {
-        throw new Error('รหัสผ่านไม่ตรงกัน');
-      }
-
-      if (data.password.length < 6) {
-        throw new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
-      }
-
-      // Check if email already exists
-      const existingUser = mockUsers.find(u => u.email === data.email);
-      if (existingUser) {
-        throw new Error('อีเมลนี้ถูกใช้งานแล้ว');
-      }
-
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Create new user
-      const newUser: User = {
-        id: Date.now().toString(),
-        email: data.email,
-        name: data.name,
-        role: data.role,
-        phone: data.phone,
-        location: data.location,
-        farmName: data.farmName,
-        isVerified: false,
-        createdAt: new Date(),
-        avatar: data.role === 'farmer' 
-          ? 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=300'
-          : 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=300'
-      };
-
-      // Add to mock users (in real app, this would be sent to server)
-      mockUsers.push(newUser);
+      const profile = await authService.register(data);
+      const user = convertProfileToUser(profile);
 
       // Store user data
-      localStorage.setItem('farm2hand_user', JSON.stringify(newUser));
-      dispatch({ type: 'AUTH_SUCCESS', payload: newUser });
+      localStorage.setItem('farm2hand_user', JSON.stringify(user));
+      dispatch({ type: 'AUTH_SUCCESS', payload: user });
     } catch (error) {
-      dispatch({ type: 'AUTH_ERROR', payload: error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการสมัครสมาชิก' });
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       throw error;
     }
   };
@@ -191,22 +151,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'AUTH_START' });
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Convert User updates to UserProfile format
+      const profileUpdates: Partial<UserProfile> = {};
+      if (data.name !== undefined) profileUpdates.Name = data.name;
+      if (data.email !== undefined) profileUpdates.Email = data.email;
+      if (data.role !== undefined) profileUpdates.role = data.role;
+      if (data.phone !== undefined) profileUpdates.Phone = data.phone;
+      if (data.location !== undefined) profileUpdates.Address = data.location;
 
-      const updatedUser = { ...state.user, ...data };
-      
-      // Update in mock users array
-      const userIndex = mockUsers.findIndex(u => u.id === state.user!.id);
-      if (userIndex !== -1) {
-        mockUsers[userIndex] = updatedUser;
-      }
+      const updatedProfile = await authService.updateProfile(state.user.id, profileUpdates);
+      const updatedUser = convertProfileToUser(updatedProfile);
 
       // Store updated user data
       localStorage.setItem('farm2hand_user', JSON.stringify(updatedUser));
       dispatch({ type: 'AUTH_SUCCESS', payload: updatedUser });
     } catch (error) {
-      dispatch({ type: 'AUTH_ERROR', payload: error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล' });
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล';
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       throw error;
     }
   };
