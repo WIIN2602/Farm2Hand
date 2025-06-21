@@ -2,25 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Star, MapPin, ShoppingCart, Heart, Package, Grid, List, ChevronDown, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { customerService } from '../services/customerService';
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  unit: string;
-  image: string;
-  farmer: string;
-  farmerId: number;
-  location: string;
-  rating: number;
-  reviews: number;
-  inStock: boolean;
-  category: string;
-  description: string;
-  organic: boolean;
-  discount?: number;
-  tags: string[];
-}
+import { productService, type Product } from '../services/productService';
 
 interface FilterOptions {
   category: string;
@@ -31,509 +13,19 @@ interface FilterOptions {
   sortBy: 'name' | 'price' | 'rating' | 'newest';
 }
 
-const mockProducts: Product[] = [
-  // Fresh Vegetables
-  {
-    id: 1,
-    name: 'ผักกาดหอมออร์แกนิค',
-    price: 45,
-    unit: 'ถุง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.9,
-    reviews: 203,
-    inStock: true,
-    category: 'Fresh Vegetables',
-    description: 'ผักกาดหอมปลอดสารพิษ ปลูกด้วยวิธีธรรมชาติ',
-    organic: true,
-    tags: ['ปลอดสารพิษ', 'สดใหม่', 'ออร์แกนิค']
-  },
-  {
-    id: 2,
-    name: 'คะน้าไฮโดรโปนิกส์',
-    price: 35,
-    unit: 'ถุง',
-    image: 'https://images.pexels.com/photos/2255935/pexels-photo-2255935.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.7,
-    reviews: 156,
-    inStock: true,
-    category: 'Fresh Vegetables',
-    description: 'คะน้าปลูกด้วยระบบไฮโดรโปนิกส์ สะอาด ปลอดภัย',
-    organic: true,
-    tags: ['ไฮโดรโปนิกส์', 'สะอาด', 'กรอบ']
-  },
-  {
-    id: 3,
-    name: 'ผักบุ้งจีน',
-    price: 25,
-    unit: 'ถุง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.6,
-    reviews: 89,
-    inStock: true,
-    category: 'Fresh Vegetables',
-    description: 'ผักบุ้งจีนสดใหม่ เก็บในตอนเช้า กรอบหวาน',
-    organic: false,
-    tags: ['สดใหม่', 'กรอบ', 'หวาน']
-  },
-  {
-    id: 4,
-    name: 'ผักชีฝรั่ง',
-    price: 30,
-    unit: 'ถุง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.8,
-    reviews: 124,
-    inStock: true,
-    category: 'Fresh Vegetables',
-    description: 'ผักชีฝรั่งหอมกรุ่น เหมาะสำหรับทำสลัด',
-    organic: true,
-    tags: ['หอม', 'สดใหม่', 'ออร์แกนิค']
-  },
-  {
-    id: 5,
-    name: 'แครอทเบบี้',
-    price: 95,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.8,
-    reviews: 167,
-    inStock: true,
-    category: 'Fresh Vegetables',
-    description: 'แครอทเบบี้หวานกรอบ ขนาดเล็กน่ารัก เหมาะสำหรับเด็ก',
-    organic: true,
-    tags: ['หวาน', 'กรอบ', 'ออร์แกนิค']
-  },
-  {
-    id: 6,
-    name: 'มะเขือเทศราชินี',
-    price: 80,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.7,
-    reviews: 89,
-    inStock: true,
-    category: 'Fresh Vegetables',
-    description: 'มะเขือเทศราชินีสีแดงสด รสชาติหวานอมเปรี้ยว',
-    organic: false,
-    tags: ['หวาน', 'สดใหม่', 'คุณภาพดี']
-  },
-  {
-    id: 7,
-    name: 'หอมแดงออร์แกนิค',
-    price: 120,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.9,
-    reviews: 145,
-    inStock: true,
-    category: 'Fresh Vegetables',
-    description: 'หอมแดงออร์แกนิค หอมหวาน เก็บได้นาน',
-    organic: true,
-    tags: ['หอม', 'หวาน', 'ออร์แกนิค']
-  },
-
-  // Fruits
-  {
-    id: 8,
-    name: 'มะม่วงน้ำดอกไม้',
-    price: 120,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/2294471/pexels-photo-2294471.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.8,
-    reviews: 156,
-    inStock: true,
-    category: 'Fruits',
-    description: 'มะม่วงน้ำดอกไม้สดใหม่ หวานฉ่ำ เก็บจากต้นในวันเดียวกัน',
-    organic: true,
-    discount: 10,
-    tags: ['หวาน', 'สดใหม่', 'ออร์แกนิค']
-  },
-  {
-    id: 9,
-    name: 'กล้วยหอมทอง',
-    price: 60,
-    unit: 'หวี',
-    image: 'https://images.pexels.com/photos/2872755/pexels-photo-2872755.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.6,
-    reviews: 124,
-    inStock: true,
-    category: 'Fruits',
-    description: 'กล้วยหอมทองหวานหอม เนื้อนุ่ม สุกพอดี',
-    organic: false,
-    discount: 5,
-    tags: ['หวาน', 'สุกพอดี', 'หอม']
-  },
-  {
-    id: 10,
-    name: 'ส้มโอขาวน้ำหวาน',
-    price: 150,
-    unit: 'ลูก',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.9,
-    reviews: 134,
-    inStock: false,
-    category: 'Fruits',
-    description: 'ส้มโอขาวน้ำหวาน เนื้อฉ่ำ หวานเข้มข้น',
-    organic: false,
-    tags: ['หวาน', 'ฉ่ำ', 'คุณภาพดี']
-  },
-  {
-    id: 11,
-    name: 'มะละกอสุก',
-    price: 40,
-    unit: 'ลูก',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.5,
-    reviews: 98,
-    inStock: true,
-    category: 'Fruits',
-    description: 'มะละกอสุกหวาน เนื้อนุ่ม สีส้มสวย',
-    organic: false,
-    tags: ['หวาน', 'นุ่ม', 'สุกพอดี']
-  },
-  {
-    id: 12,
-    name: 'แก้วมังกรขาว',
-    price: 80,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.7,
-    reviews: 112,
-    inStock: true,
-    category: 'Fruits',
-    description: 'แก้วมังกรขาวหวานเซาะ เนื้อกรอบ มีประโยชน์',
-    organic: true,
-    tags: ['หวาน', 'กรอบ', 'ออร์แกนิค']
-  },
-  {
-    id: 13,
-    name: 'สับปะรดภูเก็ต',
-    price: 50,
-    unit: 'ลูก',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.8,
-    reviews: 156,
-    inStock: true,
-    category: 'Fruits',
-    description: 'สับปะรดภูเก็ตหวานหอม เนื้อเหลือง น้ำหวาน',
-    organic: false,
-    tags: ['หวาน', 'หอม', 'ฉ่ำ']
-  },
-
-  // Rice
-  {
-    id: 14,
-    name: 'ข้าวหอมมะลิ',
-    price: 45,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.9,
-    reviews: 245,
-    inStock: true,
-    category: 'Rice',
-    description: 'ข้าวหอมมะลิแท้ 100% หอมหวาน เก็บใหม่',
-    organic: false,
-    tags: ['หอม', 'หวาน', 'เก็บใหม่']
-  },
-  {
-    id: 15,
-    name: 'ข้าวกล้องออร์แกนิค',
-    price: 55,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.8,
-    reviews: 189,
-    inStock: true,
-    category: 'Rice',
-    description: 'ข้าวกล้องออร์แกนิค มีประโยชน์ ใยอาหารสูง',
-    organic: true,
-    tags: ['ออร์แกนิค', 'ใยอาหารสูง', 'มีประโยชน์']
-  },
-  {
-    id: 16,
-    name: 'ข้าวเหนียวขาว',
-    price: 50,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.7,
-    reviews: 134,
-    inStock: true,
-    category: 'Rice',
-    description: 'ข้าวเหนียวขาวเก่า เหนียวนุ่ม หอมหวาน',
-    organic: false,
-    tags: ['เหนียว', 'นุ่ม', 'หอม']
-  },
-  {
-    id: 17,
-    name: 'ข้าวแดงออร์แกนิค',
-    price: 65,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.6,
-    reviews: 98,
-    inStock: true,
-    category: 'Rice',
-    description: 'ข้าวแดงออร์แกนิค สีแดงธรรมชาติ มีแอนโทไซยานิน',
-    organic: true,
-    tags: ['ออร์แกนิค', 'แอนโทไซยานิน', 'สีธรรมชาติ']
-  },
-  {
-    id: 18,
-    name: 'ข้าวดำออร์แกนิค',
-    price: 75,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.9,
-    reviews: 167,
-    inStock: true,
-    category: 'Rice',
-    description: 'ข้าวดำออร์แกนิค สีดำธรรมชาติ มีสารต้านอนุมูลอิสระ',
-    organic: true,
-    tags: ['ออร์แกนิค', 'ต้านอนุมูลอิสระ', 'สีธรรมชาติ']
-  },
-
-  // Eggs
-  {
-    id: 19,
-    name: 'ไข่ไก่สด',
-    price: 120,
-    unit: 'แผง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.7,
-    reviews: 98,
-    inStock: true,
-    category: 'Eggs',
-    description: 'ไข่ไก่สดใหม่ เก็บในวันเดียวกัน ไก่เลี้ยงแบบปล่อย',
-    organic: true,
-    tags: ['สดใหม่', 'ไก่ปล่อย', 'ออร์แกนิค']
-  },
-  {
-    id: 20,
-    name: 'ไข่ไก่ออร์แกนิค',
-    price: 150,
-    unit: 'แผง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.9,
-    reviews: 156,
-    inStock: true,
-    category: 'Eggs',
-    description: 'ไข่ไก่ออร์แกนิค ไก่กินอาหารธรรมชาติ ไม่ใช้ยาปฏิชีวนะ',
-    organic: true,
-    tags: ['ออร์แกนิค', 'ธรรมชาติ', 'ปลอดยา']
-  },
-  {
-    id: 21,
-    name: 'ไข่เป็ดสด',
-    price: 80,
-    unit: 'แผง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.6,
-    reviews: 89,
-    inStock: true,
-    category: 'Eggs',
-    description: 'ไข่เป็ดสดใหม่ ขนาดใหญ่ เหมาะทำขนมไทย',
-    organic: false,
-    tags: ['สดใหม่', 'ขนาดใหญ่', 'ทำขนม']
-  },
-  {
-    id: 22,
-    name: 'ไข่นกกระทา',
-    price: 60,
-    unit: 'แผง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.8,
-    reviews: 124,
-    inStock: true,
-    category: 'Eggs',
-    description: 'ไข่นกกระทาสดใหม่ ขนาดเล็ก รสชาติเข้มข้น',
-    organic: true,
-    tags: ['สดใหม่', 'เข้มข้น', 'ออร์แกนิค']
-  },
-
-  // Out-of-Season Products
-  {
-    id: 23,
-    name: 'สตรอเบอร์รี่นอกฤดู',
-    price: 200,
-    unit: 'กล่อง',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.9,
-    reviews: 89,
-    inStock: true,
-    category: 'Out-of-Season Products',
-    description: 'สตรอเบอร์รี่นอกฤดูกาล ปลูกในโรงเรือน หวานฉ่ำ',
-    organic: true,
-    discount: 15,
-    tags: ['นอกฤดู', 'โรงเรือน', 'หวาน']
-  },
-  {
-    id: 24,
-    name: 'ทุเรียนนอกฤดู',
-    price: 300,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.8,
-    reviews: 67,
-    inStock: true,
-    category: 'Out-of-Season Products',
-    description: 'ทุเรียนนอกฤดูกาล เนื้อเหลือง หวานมัน',
-    organic: false,
-    tags: ['นอกฤดู', 'หวาน', 'มัน']
-  },
-  {
-    id: 25,
-    name: 'ลำไยนอกฤดู',
-    price: 180,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.7,
-    reviews: 98,
-    inStock: true,
-    category: 'Out-of-Season Products',
-    description: 'ลำไยนอกฤดูกาล เนื้อใส หวานกรอบ',
-    organic: false,
-    tags: ['นอกฤดู', 'หวาน', 'กรอบ']
-  },
-  {
-    id: 26,
-    name: 'ลิ้นจี่นอกฤดู',
-    price: 220,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายวิชัย ผักสด',
-    farmerId: 2,
-    location: 'จ.เลย',
-    rating: 4.9,
-    reviews: 134,
-    inStock: false,
-    category: 'Out-of-Season Products',
-    description: 'ลิ้นจี่นอกฤดูกาล เนื้อขาวใส หวานฉ่ำ',
-    organic: true,
-    tags: ['นอกฤดู', 'หวาน', 'ฉ่ำ']
-  },
-  {
-    id: 27,
-    name: 'เงาะนอกฤดู',
-    price: 160,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายสมชาย ใจดี',
-    farmerId: 1,
-    location: 'จ.เชียงใหม่',
-    rating: 4.6,
-    reviews: 76,
-    inStock: true,
-    category: 'Out-of-Season Products',
-    description: 'เงาะนอกฤดูกาล เนื้อขาว หวานเซาะ',
-    organic: false,
-    tags: ['นอกฤดู', 'หวาน', 'เซาะ']
-  },
-  {
-    id: 28,
-    name: 'มังคุดนอกฤดู',
-    price: 250,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/1414130/pexels-photo-1414130.jpeg?auto=compress&cs=tinysrgb&w=400',
-    farmer: 'นายประสิทธิ์ เกษตรกร',
-    farmerId: 3,
-    location: 'จ.นครปฐม',
-    rating: 4.9,
-    reviews: 145,
-    inStock: true,
-    category: 'Out-of-Season Products',
-    description: 'มังคุดนอกฤดูกาล ราชินีแห่งผลไม้ หวานเซาะ',
-    organic: true,
-    tags: ['นอกฤดู', 'ราชินี', 'หวาน']
-  }
-];
-
-const categories = ['ทั้งหมด', 'Fresh Vegetables', 'Fruits', 'Rice', 'Eggs', 'Out-of-Season Products'];
 const locations = ['ทั้งหมด', 'จ.เชียงใหม่', 'จ.เลย', 'จ.นครปฐม', 'จ.ขอนแก่น', 'จ.ระยอง'];
 
 export const ProductsPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>(['ทั้งหมด']);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoriteLoading, setFavoriteLoading] = useState<string | null>(null);
   
   const [filters, setFilters] = useState<FilterOptions>({
     category: 'ทั้งหมด',
@@ -543,6 +35,12 @@ export const ProductsPage: React.FC = () => {
     inStock: true,
     sortBy: 'name'
   });
+
+  // Load products and categories
+  useEffect(() => {
+    loadProducts();
+    loadCategories();
+  }, []);
 
   // Load user favorites
   useEffect(() => {
@@ -572,7 +70,7 @@ export const ProductsPage: React.FC = () => {
 
     // Location filter
     if (filters.location !== 'ทั้งหมด') {
-      filtered = filtered.filter(product => product.location === filters.location);
+      filtered = filtered.filter(product => product.location.includes(filters.location));
     }
 
     // Price range filter
@@ -607,6 +105,27 @@ export const ProductsPage: React.FC = () => {
     setFilteredProducts(filtered);
   }, [products, searchTerm, filters]);
 
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const productsData = await productService.getAllProducts();
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const categoriesData = await productService.getCategories();
+      setCategories(['ทั้งหมด', ...categoriesData]);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
   const loadUserFavorites = async () => {
     if (!user) return;
     
@@ -623,28 +142,28 @@ export const ProductsPage: React.FC = () => {
   const handleAddToFavorites = async (productName: string) => {
     if (!user || user.role !== 'customer') return;
     
-    setLoading(true);
+    setFavoriteLoading(productName);
     try {
       await customerService.addFavorite(user.id, productName);
       setFavorites(prev => [...prev, productName]);
     } catch (error) {
       console.error('Failed to add to favorites:', error);
     } finally {
-      setLoading(false);
+      setFavoriteLoading(null);
     }
   };
 
   const handleRemoveFromFavorites = async (productName: string) => {
     if (!user || user.role !== 'customer') return;
     
-    setLoading(true);
+    setFavoriteLoading(productName);
     try {
       await customerService.removeFavorite(user.id, productName);
       setFavorites(prev => prev.filter(fav => fav !== productName));
     } catch (error) {
       console.error('Failed to remove from favorites:', error);
     } finally {
-      setLoading(false);
+      setFavoriteLoading(null);
     }
   };
 
@@ -662,6 +181,7 @@ export const ProductsPage: React.FC = () => {
 
   const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
     const isFavorite = favorites.includes(product.name);
+    const isLoadingFavorite = favoriteLoading === product.name;
     const discountedPrice = product.discount 
       ? product.price * (1 - product.discount / 100)
       : product.price;
@@ -705,10 +225,10 @@ export const ProductsPage: React.FC = () => {
           {isAuthenticated && user?.role === 'customer' && (
             <button
               onClick={() => isFavorite ? handleRemoveFromFavorites(product.name) : handleAddToFavorites(product.name)}
-              disabled={loading}
+              disabled={isLoadingFavorite}
               className="absolute top-2 right-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center transition-colors duration-200"
             >
-              {loading ? (
+              {isLoadingFavorite ? (
                 <Loader2 className="w-4 h-4 animate-spin text-cool-gray" />
               ) : (
                 <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-cool-gray'}`} />
@@ -777,6 +297,13 @@ export const ProductsPage: React.FC = () => {
             ))}
           </div>
 
+          {/* Stock Info */}
+          {product.inStock && (
+            <div className="text-xs text-cool-gray mb-3">
+              คงเหลือ: {product.stock} {product.unit}
+            </div>
+          )}
+
           {/* Action Button */}
           <button
             disabled={!product.inStock}
@@ -793,6 +320,23 @@ export const ProductsPage: React.FC = () => {
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-soft-beige to-light-beige flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-nature-green rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden p-2 animate-pulse">
+            <img 
+              src="/ChatGPT Image 17 มิ.ย. 2568 10_27_08.png" 
+              alt="Farm2Hand Logo" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <p className="text-nature-dark-green">กำลังโหลดสินค้า...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-beige to-light-beige">
