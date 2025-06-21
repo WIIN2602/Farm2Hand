@@ -6,6 +6,9 @@ import { productService, type Product } from '../services/productService';
 import { SearchModal } from '../components/SearchModal';
 import { AddProductModal } from '../components/AddProductModal';
 import { EditProductModal } from '../components/EditProductModal';
+import { NotificationContainer } from '../components/NotificationPopup';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useNotification } from '../hooks/useNotification';
 
 interface FarmerProfile {
   id: string;
@@ -29,6 +32,14 @@ interface FarmerProfile {
 
 export const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
+  const {
+    notifications,
+    removeNotification,
+    showSuccess,
+    showError,
+    showWarning,
+  } = useNotification();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [loadingCustomerData, setLoadingCustomerData] = useState(false);
@@ -41,6 +52,21 @@ export const ProfilePage: React.FC = () => {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [updatingProduct, setUpdatingProduct] = useState<number | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<number | null>(null);
+  
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+  
   const [editedProfile, setEditedProfile] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -66,6 +92,7 @@ export const ProfilePage: React.FC = () => {
       setCustomerData(data);
     } catch (error) {
       console.error('Failed to load customer data:', error);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลลูกค้าได้');
     } finally {
       setLoadingCustomerData(false);
     }
@@ -80,6 +107,7 @@ export const ProfilePage: React.FC = () => {
       setFarmerProducts(products);
     } catch (error) {
       console.error('Failed to load farmer products:', error);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดสินค้าได้');
     } finally {
       setLoadingProducts(false);
     }
@@ -122,8 +150,10 @@ export const ProfilePage: React.FC = () => {
     try {
       await updateProfile(editedProfile);
       setIsEditing(false);
+      showSuccess('บันทึกสำเร็จ', 'ข้อมูลโปรไฟล์ได้รับการอัปเดตแล้ว');
     } catch (error) {
       console.error('Failed to update profile:', error);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลโปรไฟล์ได้');
     }
   };
 
@@ -150,8 +180,10 @@ export const ProfilePage: React.FC = () => {
     try {
       const updatedData = await customerService.removeFavorite(user.id, favoriteItem);
       setCustomerData(updatedData);
+      showSuccess('ลบสำเร็จ', `ลบ "${favoriteItem}" จากรายการโปรดแล้ว`);
     } catch (error) {
       console.error('Failed to remove favorite:', error);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถลบรายการโปรดได้');
     }
   };
 
@@ -161,8 +193,10 @@ export const ProfilePage: React.FC = () => {
     try {
       const updatedData = await customerService.unfollowFarmer(user.id, farmerName);
       setCustomerData(updatedData);
+      showSuccess('เลิกติดตามสำเร็จ', `เลิกติดตาม "${farmerName}" แล้ว`);
     } catch (error) {
       console.error('Failed to unfollow farmer:', error);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถเลิกติดตามได้');
     }
   };
 
@@ -177,10 +211,12 @@ export const ProfilePage: React.FC = () => {
 
   const handleProductAdded = () => {
     loadFarmerProducts(); // Reload farmer products when new product is added
+    showSuccess('เพิ่มสินค้าสำเร็จ', 'สินค้าใหม่ได้รับการเพิ่มแล้ว');
   };
 
   const handleProductUpdated = () => {
     loadFarmerProducts(); // Reload farmer products when product is updated
+    showSuccess('อัปเดตสำเร็จ', 'ข้อมูลสินค้าได้รับการอัปเดตแล้ว');
   };
 
   const handleEditProduct = (product: Product) => {
@@ -192,28 +228,32 @@ export const ProfilePage: React.FC = () => {
     if (!user || user.role !== 'farmer') return;
     
     // Show confirmation dialog
-    const confirmed = window.confirm(`คุณแน่ใจหรือไม่ที่จะลบสินค้า "${productName}"?\n\nการดำเนินการนี้ไม่สามารถยกเลิกได้`);
-    
-    if (!confirmed) {
-      return;
-    }
-
-    setDeletingProduct(productId);
-    try {
-      await productService.deleteProduct(productId, user.id);
-      
-      // Remove product from local state immediately for better UX
-      setFarmerProducts(prev => prev.filter(product => product.id !== productId));
-      
-      // Show success message
-      alert('ลบสินค้าเรียบร้อยแล้ว');
-    } catch (error) {
-      console.error('Failed to delete product:', error);
-      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการลบสินค้า';
-      alert(`เกิดข้อผิดพลาด: ${errorMessage}`);
-    } finally {
-      setDeletingProduct(null);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'ยืนยันการลบสินค้า',
+      message: `คุณแน่ใจหรือไม่ที่จะลบสินค้า "${productName}"?\n\nการดำเนินการนี้ไม่สามารถยกเลิกได้`,
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        
+        setDeletingProduct(productId);
+        try {
+          await productService.deleteProduct(productId, user.id);
+          
+          // Remove product from local state immediately for better UX
+          setFarmerProducts(prev => prev.filter(product => product.id !== productId));
+          
+          // Show success notification
+          showSuccess('ลบสินค้าสำเร็จ', `ลบ "${productName}" เรียบร้อยแล้ว`);
+        } catch (error) {
+          console.error('Failed to delete product:', error);
+          const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการลบสินค้า';
+          showError('เกิดข้อผิดพลาด', errorMessage);
+        } finally {
+          setDeletingProduct(null);
+        }
+      }
+    });
   };
 
   const handleToggleStock = async (productId: number) => {
@@ -223,9 +263,11 @@ export const ProfilePage: React.FC = () => {
     try {
       await productService.toggleProductStock(productId, user.id);
       loadFarmerProducts(); // Reload products after update
+      showSuccess('อัปเดตสำเร็จ', 'สถานะสินค้าได้รับการอัปเดตแล้ว');
     } catch (error) {
       console.error('Failed to update product stock:', error);
-      alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการอัปเดตสถานะสินค้า');
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการอัปเดตสถานะสินค้า';
+      showError('เกิดข้อผิดพลาด', errorMessage);
     } finally {
       setUpdatingProduct(null);
     }
@@ -849,6 +891,24 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Notification Container */}
+      <NotificationContainer
+        notifications={notifications}
+        onClose={removeNotification}
+      />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        confirmText="ลบ"
+        cancelText="ยกเลิก"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
 
       {/* Search Modal */}
       <SearchModal
