@@ -145,7 +145,7 @@ export const HomePage: React.FC = () => {
       console.error('Failed to load categories:', error);
       // Fallback to static categories if database fails
       setCategories([
-        { name: 'ผลไม้', icon: '🍎', count: 0, color: 'bg-red-100 text-red-700' },
+        { name: 'ผลไม้', icon: '🍇', count: 0, color: 'bg-purple-100 text-purple-700' },
         { name: 'ผัก', icon: '🥕', count: 0, color: 'bg-orange-100 text-orange-700' },
         { name: 'ผักใบเขียว', icon: '🥬', count: 0, color: 'bg-green-100 text-green-700' },
         { name: 'ข้าว', icon: '🌾', count: 0, color: 'bg-yellow-100 text-yellow-700' },

@@ -699,23 +699,23 @@ export const productService = {
         return acc;
       }, {} as Record<string, number>);
 
-      // Define category icons and colors
+      // Define category icons and colors with more appropriate emojis
       const categoryConfig: Record<string, { icon: string; color: string }> = {
-        'ผลไม้': { icon: '🍎', color: 'bg-red-100 text-red-700' },
+        'ผลไม้': { icon: '🍇', color: 'bg-purple-100 text-purple-700' },
         'ผัก': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
         'ผักใบเขียว': { icon: '🥬', color: 'bg-green-100 text-green-700' },
         'ข้าว': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
         'ไข่': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
         'ผลไม้นอกฤดู': { icon: '🍓', color: 'bg-pink-100 text-pink-700' },
         'สมุนไพร': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' },
-        'อื่นๆ': { icon: '📦', color: 'bg-gray-100 text-gray-700' }
+        'อื่นๆ': { icon: '🛒', color: 'bg-gray-100 text-gray-700' }
       };
 
       // Convert to CategoryWithCount array
       const categoriesWithCounts: CategoryWithCount[] = Object.entries(categoryCountMap).map(([name, count]) => ({
         name,
         count,
-        icon: categoryConfig[name]?.icon || '📦',
+        icon: categoryConfig[name]?.icon || '🛒',
         color: categoryConfig[name]?.color || 'bg-gray-100 text-gray-700'
       }));
 
