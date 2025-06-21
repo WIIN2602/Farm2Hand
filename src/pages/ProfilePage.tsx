@@ -40,6 +40,7 @@ export const ProfilePage: React.FC = () => {
   const [farmerProducts, setFarmerProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [updatingProduct, setUpdatingProduct] = useState<number | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<number | null>(null);
   const [editedProfile, setEditedProfile] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -187,19 +188,31 @@ export const ProfilePage: React.FC = () => {
     setShowEditProductModal(true);
   };
 
-  const handleDeleteProduct = async (productId: number) => {
+  const handleDeleteProduct = async (productId: number, productName: string) => {
     if (!user || user.role !== 'farmer') return;
     
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบสินค้านี้?')) {
+    // Show confirmation dialog
+    const confirmed = window.confirm(`คุณแน่ใจหรือไม่ที่จะลบสินค้า "${productName}"?\n\nการดำเนินการนี้ไม่สามารถยกเลิกได้`);
+    
+    if (!confirmed) {
       return;
     }
 
+    setDeletingProduct(productId);
     try {
       await productService.deleteProduct(productId, user.id);
-      loadFarmerProducts(); // Reload products after deletion
+      
+      // Remove product from local state immediately for better UX
+      setFarmerProducts(prev => prev.filter(product => product.id !== productId));
+      
+      // Show success message
+      alert('ลบสินค้าเรียบร้อยแล้ว');
     } catch (error) {
       console.error('Failed to delete product:', error);
-      alert('เกิดข้อผิดพลาดในการลบสินค้า');
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการลบสินค้า';
+      alert(`เกิดข้อผิดพลาด: ${errorMessage}`);
+    } finally {
+      setDeletingProduct(null);
     }
   };
 
@@ -592,6 +605,7 @@ export const ProfilePage: React.FC = () => {
                     {farmerProducts.map((product) => {
                       const buttonInfo = getProductButtonInfo(product);
                       const isUpdating = updatingProduct === product.id;
+                      const isDeleting = deletingProduct === product.id;
                       
                       return (
                         <div key={product.id} className="border border-border-beige rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200">
@@ -641,9 +655,9 @@ export const ProfilePage: React.FC = () => {
                               {/* Main Status Button */}
                               <button
                                 onClick={() => handleToggleStock(product.id)}
-                                disabled={!buttonInfo.canClick || isUpdating}
+                                disabled={!buttonInfo.canClick || isUpdating || isDeleting}
                                 className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 flex items-center justify-center gap-1 ${
-                                  !buttonInfo.canClick
+                                  !buttonInfo.canClick || isDeleting
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                     : buttonInfo.color
                                 }`}
@@ -658,17 +672,31 @@ export const ProfilePage: React.FC = () => {
                               {/* Edit Button */}
                               <button 
                                 onClick={() => handleEditProduct(product)}
-                                className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium transition-colors duration-200"
+                                disabled={isDeleting}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors duration-200 ${
+                                  isDeleting
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                }`}
                               >
                                 <Edit className="w-3 h-3" />
                               </button>
                               
                               {/* Delete Button */}
                               <button 
-                                onClick={() => handleDeleteProduct(product.id)}
-                                className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs font-medium transition-colors duration-200"
+                                onClick={() => handleDeleteProduct(product.id, product.name)}
+                                disabled={isDeleting}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors duration-200 flex items-center justify-center ${
+                                  isDeleting
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                }`}
                               >
-                                <Trash2 className="w-3 h-3" />
+                                {isDeleting ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3" />
+                                )}
                               </button>
                             </div>
                           </div>
