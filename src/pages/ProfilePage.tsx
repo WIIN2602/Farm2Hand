@@ -5,6 +5,7 @@ import { customerService, type CustomerData } from '../services/customerService'
 import { productService, type Product } from '../services/productService';
 import { SearchModal } from '../components/SearchModal';
 import { AddProductModal } from '../components/AddProductModal';
+import { EditProductModal } from '../components/EditProductModal';
 
 interface FarmerProfile {
   id: string;
@@ -34,6 +35,8 @@ export const ProfilePage: React.FC = () => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchType, setSearchType] = useState<'favorites' | 'following'>('favorites');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [farmerProducts, setFarmerProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [updatingProduct, setUpdatingProduct] = useState<number | null>(null);
@@ -173,6 +176,15 @@ export const ProfilePage: React.FC = () => {
 
   const handleProductAdded = () => {
     loadFarmerProducts(); // Reload farmer products when new product is added
+  };
+
+  const handleProductUpdated = () => {
+    loadFarmerProducts(); // Reload farmer products when product is updated
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setShowEditProductModal(true);
   };
 
   const handleDeleteProduct = async (productId: number) => {
@@ -644,7 +656,10 @@ export const ProfilePage: React.FC = () => {
                               </button>
                               
                               {/* Edit Button */}
-                              <button className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium transition-colors duration-200">
+                              <button 
+                                onClick={() => handleEditProduct(product)}
+                                className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium transition-colors duration-200"
+                              >
                                 <Edit className="w-3 h-3" />
                               </button>
                               
@@ -820,6 +835,14 @@ export const ProfilePage: React.FC = () => {
         isOpen={showAddProductModal}
         onClose={() => setShowAddProductModal(false)}
         onProductAdded={handleProductAdded}
+      />
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        isOpen={showEditProductModal}
+        onClose={() => setShowEditProductModal(false)}
+        onProductUpdated={handleProductUpdated}
+        product={editingProduct}
       />
     </div>
   );
