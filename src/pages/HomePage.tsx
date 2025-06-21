@@ -143,13 +143,14 @@ export const HomePage: React.FC = () => {
       setCategories(categoriesData);
     } catch (error) {
       console.error('Failed to load categories:', error);
-      // Fallback to static categories if database fails
+      // Fallback to static categories if database fails with corrected emojis
       setCategories([
         { name: 'ผลไม้', icon: '🍇', count: 0, color: 'bg-purple-100 text-purple-700' },
         { name: 'ผัก', icon: '🥕', count: 0, color: 'bg-orange-100 text-orange-700' },
-        { name: 'ผักใบเขียว', icon: '🥬', count: 0, color: 'bg-green-100 text-green-700' },
+        { name: 'ผักใบเขียว', icon: '🥕', count: 0, color: 'bg-green-100 text-green-700' }, // Fresh Vegetables
         { name: 'ข้าว', icon: '🌾', count: 0, color: 'bg-yellow-100 text-yellow-700' },
         { name: 'ไข่', icon: '🥚', count: 0, color: 'bg-blue-100 text-blue-700' },
+        { name: 'ผลไม้นอกฤดู', icon: '❄️', count: 0, color: 'bg-pink-100 text-pink-700' }, // Out-of-season Products
         { name: 'สมุนไพร', icon: '🌿', count: 0, color: 'bg-emerald-100 text-emerald-700' }
       ]);
     } finally {
