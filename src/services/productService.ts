@@ -404,7 +404,7 @@ export const productService = {
         }
       }
 
-      const { data: updatedProduct, error } = await supabase
+      const { data: updatedProducts, error } = await supabase
         .from('Farm2Hand_product')
         .update(updateData)
         .eq('id', productId)
@@ -415,14 +415,18 @@ export const productService = {
             Name,
             Address
           )
-        `)
-        .single();
+        `);
 
       if (error) {
         console.error('Update error:', error);
         throw new Error('เกิดข้อผิดพลาดในการอัปเดตสินค้า');
       }
 
+      if (!updatedProducts || updatedProducts.length === 0) {
+        throw new Error('ไม่พบสินค้าที่อัปเดต');
+      }
+
+      const updatedProduct = updatedProducts[0];
       const farmerInfo = updatedProduct.Farm2Hand_user as FarmerInfo;
       return convertToProduct(updatedProduct as Farm2HandProduct, farmerInfo);
     } catch (error) {
@@ -522,7 +526,7 @@ export const productService = {
         updated_at: new Date().toISOString()
       };
 
-      const { data: updatedProduct, error: updateError } = await supabase
+      const { data: updatedProducts, error: updateError } = await supabase
         .from('Farm2Hand_product')
         .update(updateData)
         .eq('id', productId)
@@ -533,14 +537,18 @@ export const productService = {
             Name,
             Address
           )
-        `)
-        .single();
+        `);
 
       if (updateError) {
         console.error('Update error:', updateError);
         throw new Error('เกิดข้อผิดพลาดในการอัปเดตสต็อกสินค้า');
       }
 
+      if (!updatedProducts || updatedProducts.length === 0) {
+        throw new Error('ไม่พบสินค้าที่อัปเดต');
+      }
+
+      const updatedProduct = updatedProducts[0];
       const farmerInfo = updatedProduct.Farm2Hand_user as FarmerInfo;
       return convertToProduct(updatedProduct as Farm2HandProduct, farmerInfo);
     } catch (error) {
