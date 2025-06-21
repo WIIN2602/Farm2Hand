@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Star, MapPin, ShoppingCart, Heart, Package, Grid, List, ChevronDown, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { customerService } from '../services/customerService';
-import { productService, type Product } from '../services/productService';
+import { productService, type Product, type CategoryWithCount } from '../services/productService';
 
 interface FilterOptions {
   category: string;
@@ -20,6 +20,7 @@ export const ProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>(['ทั้งหมด']);
+  const [categoriesWithCounts, setCategoriesWithCounts] = useState<CategoryWithCount[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -40,6 +41,7 @@ export const ProductsPage: React.FC = () => {
   useEffect(() => {
     loadProducts();
     loadCategories();
+    loadCategoriesWithCounts();
   }, []);
 
   // Load user favorites
@@ -123,6 +125,15 @@ export const ProductsPage: React.FC = () => {
       setCategories(['ทั้งหมด', ...categoriesData]);
     } catch (error) {
       console.error('Failed to load categories:', error);
+    }
+  };
+
+  const loadCategoriesWithCounts = async () => {
+    try {
+      const categoriesData = await productService.getCategoriesWithCounts();
+      setCategoriesWithCounts(categoriesData);
+    } catch (error) {
+      console.error('Failed to load categories with counts:', error);
     }
   };
 
@@ -351,6 +362,34 @@ export const ProductsPage: React.FC = () => {
           </p>
         </div>
 
+        {/* Category Stats */}
+        {categoriesWithCounts.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6 mb-6">
+            <h2 className="text-lg font-semibold text-nature-dark-green mb-4">หมวดหมู่สินค้า</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {categoriesWithCounts.slice(0, 6).map((category, index) => (
+                <button
+                  key={index}
+                  onClick={() => setFilters(prev => ({ ...prev, category: category.name }))}
+                  className={`p-4 rounded-lg border transition-all duration-200 text-center ${
+                    filters.category === category.name
+                      ? 'border-nature-green bg-nature-green/10'
+                      : 'border-border-beige hover:border-nature-green/50 hover:bg-nature-green/5'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{category.icon}</div>
+                  <h3 className="font-medium text-nature-dark-green text-sm mb-1">
+                    {category.name}
+                  </h3>
+                  <span className={`text-xs px-2 py-1 rounded-full ${category.color}`}>
+                    {category.count} สินค้า
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Search and Controls */}
         <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -503,6 +542,7 @@ export const ProductsPage: React.FC = () => {
           <p className="text-cool-gray">
             พบสินค้า {filteredProducts.length} รายการ
             {searchTerm && ` สำหรับ "${searchTerm}"`}
+            {filters.category !== 'ทั้งหมด' && ` ในหมวดหมู่ "${filters.category}"`}
           </p>
           
           {/* Quick Stats */}

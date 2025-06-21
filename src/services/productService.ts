@@ -42,6 +42,14 @@ export interface Product {
   stock: number;
 }
 
+// Category with count interface
+export interface CategoryWithCount {
+  name: string;
+  count: number;
+  icon: string;
+  color: string;
+}
+
 // User data for farmer info
 interface FarmerInfo {
   id: number;
@@ -274,6 +282,69 @@ export const productService = {
       // Get unique categories
       const uniqueCategories = [...new Set(categories.map(item => item.product_category).filter(Boolean))];
       return uniqueCategories;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูลหมวดหมู่');
+    }
+  },
+
+  // Get categories with product counts
+  async getCategoriesWithCounts(): Promise<CategoryWithCount[]> {
+    try {
+      const { data: categoryCounts, error } = await supabase
+        .from('Farm2Hand_product')
+        .select('product_category')
+        .not('product_category', 'is', null);
+
+      if (error) {
+        console.error('Database error:', error);
+        throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูลหมวดหมู่');
+      }
+
+      if (!categoryCounts) {
+        return [];
+      }
+
+      // Count products by category
+      const categoryCountMap = categoryCounts.reduce((acc, item) => {
+        const category = item.product_category;
+        if (category) {
+          acc[category] = (acc[category] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Define category icons and colors
+      const categoryConfig: Record<string, { icon: string; color: string }> = {
+        'ผลไม้': { icon: '🍎', color: 'bg-red-100 text-red-700' },
+        'ผัก': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
+        'ผักใบเขียว': { icon: '🥬', color: 'bg-green-100 text-green-700' },
+        'ข้าว': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
+        'ไข่': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
+        'ผลไม้นอกฤดู': { icon: '🍓', color: 'bg-pink-100 text-pink-700' },
+        'สมุนไพร': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' },
+        'อื่นๆ': { icon: '📦', color: 'bg-gray-100 text-gray-700' }
+      };
+
+      // Convert to CategoryWithCount array
+      const categoriesWithCounts: CategoryWithCount[] = Object.entries(categoryCountMap).map(([name, count]) => ({
+        name,
+        count,
+        icon: categoryConfig[name]?.icon || '📦',
+        color: categoryConfig[name]?.color || 'bg-gray-100 text-gray-700'
+      }));
+
+      // Sort by count (descending) then by name
+      categoriesWithCounts.sort((a, b) => {
+        if (b.count !== a.count) {
+          return b.count - a.count;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      return categoriesWithCounts;
     } catch (error) {
       if (error instanceof Error) {
         throw error;

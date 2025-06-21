@@ -1,24 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquare, ShoppingBag, Users, TrendingUp, Star, ArrowRight, Leaf, Shield, Truck, Heart, MapPin, Package, Search } from 'lucide-react';
+import { MessageSquare, ShoppingBag, Users, TrendingUp, Star, ArrowRight, Leaf, Shield, Truck, Heart, MapPin, Package, Search, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  unit: string;
-  image: string;
-  farmer: string;
-  location: string;
-  rating: number;
-  reviews: number;
-  inStock: boolean;
-  category: string;
-  organic: boolean;
-  discount?: number;
-  tags: string[];
-}
+import { productService, type Product, type CategoryWithCount } from '../services/productService';
 
 const featuredProducts: Product[] = [
   {
@@ -28,14 +12,17 @@ const featuredProducts: Product[] = [
     unit: 'กก.',
     image: 'https://images.pexels.com/photos/2294471/pexels-photo-2294471.jpeg?auto=compress&cs=tinysrgb&w=400',
     farmer: 'นายสมชาย ใจดี',
+    farmerId: 1,
     location: 'จ.เชียงใหม่',
     rating: 4.8,
     reviews: 156,
     inStock: true,
     category: 'ผลไม้',
+    description: 'มะม่วงน้ำดอกไม้สดใหม่ หวานฉ่ำ',
     organic: true,
     discount: 10,
-    tags: ['หวาน', 'สดใหม่', 'ออร์แกนิค']
+    tags: ['หวาน', 'สดใหม่', 'ออร์แกนิค'],
+    stock: 15
   },
   {
     id: 2,
@@ -44,13 +31,16 @@ const featuredProducts: Product[] = [
     unit: 'ถุง',
     image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
     farmer: 'นายวิชัย ผักสด',
+    farmerId: 2,
     location: 'จ.เลย',
     rating: 4.9,
     reviews: 203,
     inStock: true,
     category: 'ผักใบเขียว',
+    description: 'ผักกาดหอมปลอดสารพิษ',
     organic: true,
-    tags: ['ปลอดสารพิษ', 'สดใหม่', 'ออร์แกนิค']
+    tags: ['ปลอดสารพิษ', 'สดใหม่', 'ออร์แกนิค'],
+    stock: 25
   },
   {
     id: 3,
@@ -59,13 +49,16 @@ const featuredProducts: Product[] = [
     unit: 'กก.',
     image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=400',
     farmer: 'นายประสิทธิ์ เกษตรกร',
+    farmerId: 3,
     location: 'จ.นครปฐม',
     rating: 4.7,
     reviews: 89,
     inStock: true,
     category: 'ผัก',
+    description: 'มะเขือเทศราชินีสีแดงสด',
     organic: false,
-    tags: ['หวาน', 'สดใหม่', 'คุณภาพดี']
+    tags: ['หวาน', 'สดใหม่', 'คุณภาพดี'],
+    stock: 30
   },
   {
     id: 4,
@@ -74,14 +67,17 @@ const featuredProducts: Product[] = [
     unit: 'หวี',
     image: 'https://images.pexels.com/photos/2872755/pexels-photo-2872755.jpeg?auto=compress&cs=tinysrgb&w=400',
     farmer: 'นายสมชาย ใจดี',
+    farmerId: 1,
     location: 'จ.เชียงใหม่',
     rating: 4.6,
     reviews: 124,
     inStock: true,
     category: 'ผลไม้',
+    description: 'กล้วยหอมทองหวานหอม',
     organic: false,
     discount: 5,
-    tags: ['หวาน', 'สุกพอดี', 'หอม']
+    tags: ['หวาน', 'สุกพอดี', 'หอม'],
+    stock: 25
   },
   {
     id: 5,
@@ -90,13 +86,16 @@ const featuredProducts: Product[] = [
     unit: 'กก.',
     image: 'https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=400',
     farmer: 'นายวิชัย ผักสด',
+    farmerId: 2,
     location: 'จ.เลย',
     rating: 4.8,
     reviews: 167,
     inStock: true,
     category: 'ผัก',
+    description: 'แครอทเบบี้หวานกรอบ',
     organic: true,
-    tags: ['หวาน', 'กรอบ', 'ออร์แกนิค']
+    tags: ['หวาน', 'กรอบ', 'ออร์แกนิค'],
+    stock: 15
   },
   {
     id: 6,
@@ -105,27 +104,49 @@ const featuredProducts: Product[] = [
     unit: 'กก.',
     image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=400',
     farmer: 'นายประสิทธิ์ เกษตรกร',
+    farmerId: 3,
     location: 'จ.นครปฐม',
     rating: 4.9,
     reviews: 245,
     inStock: true,
     category: 'ข้าว',
+    description: 'ข้าวหอมมะลิแท้ 100%',
     organic: false,
-    tags: ['หอม', 'หวาน', 'เก็บใหม่']
+    tags: ['หอม', 'หวาน', 'เก็บใหม่'],
+    stock: 100
   }
-];
-
-const categories = [
-  { name: 'ผลไม้', icon: '🍎', count: 25, color: 'bg-red-100 text-red-700' },
-  { name: 'ผัก', icon: '🥕', count: 32, color: 'bg-orange-100 text-orange-700' },
-  { name: 'ผักใบเขียว', icon: '🥬', count: 18, color: 'bg-green-100 text-green-700' },
-  { name: 'ข้าว', icon: '🌾', count: 12, color: 'bg-yellow-100 text-yellow-700' },
-  { name: 'ไข่', icon: '🥚', count: 8, color: 'bg-blue-100 text-blue-700' },
-  { name: 'สมุนไพร', icon: '🌿', count: 15, color: 'bg-emerald-100 text-emerald-700' }
 ];
 
 export const HomePage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  // Load categories with counts from database
+  useEffect(() => {
+    loadCategoriesWithCounts();
+  }, []);
+
+  const loadCategoriesWithCounts = async () => {
+    try {
+      setLoadingCategories(true);
+      const categoriesData = await productService.getCategoriesWithCounts();
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+      // Fallback to static categories if database fails
+      setCategories([
+        { name: 'ผลไม้', icon: '🍎', count: 0, color: 'bg-red-100 text-red-700' },
+        { name: 'ผัก', icon: '🥕', count: 0, color: 'bg-orange-100 text-orange-700' },
+        { name: 'ผักใบเขียว', icon: '🥬', count: 0, color: 'bg-green-100 text-green-700' },
+        { name: 'ข้าว', icon: '🌾', count: 0, color: 'bg-yellow-100 text-yellow-700' },
+        { name: 'ไข่', icon: '🥚', count: 0, color: 'bg-blue-100 text-blue-700' },
+        { name: 'สมุนไพร', icon: '🌿', count: 0, color: 'bg-emerald-100 text-emerald-700' }
+      ]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const features = [
     {
@@ -370,34 +391,45 @@ export const HomePage: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            {categories.map((category, index) => (
-              <Link
-                key={index}
-                to="/products"
-                className="bg-white rounded-xl p-6 shadow-sm border border-border-beige hover:shadow-lg transition-all duration-300 text-center group"
-              >
-                <div className="text-4xl mb-3">{category.icon}</div>
-                <h3 className="font-semibold text-nature-dark-green mb-2 group-hover:text-nature-green transition-colors">
-                  {category.name}
-                </h3>
-                <span className={`text-xs px-2 py-1 rounded-full ${category.color}`}>
-                  {category.count} สินค้า
-                </span>
-              </Link>
-            ))}
-          </div>
+          {loadingCategories ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-nature-green" />
+                <span className="text-cool-gray">กำลังโหลดหมวดหมู่...</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                {categories.slice(0, 6).map((category, index) => (
+                  <Link
+                    key={index}
+                    to={`/products?category=${encodeURIComponent(category.name)}`}
+                    className="bg-white rounded-xl p-6 shadow-sm border border-border-beige hover:shadow-lg transition-all duration-300 text-center group"
+                  >
+                    <div className="text-4xl mb-3">{category.icon}</div>
+                    <h3 className="font-semibold text-nature-dark-green mb-2 group-hover:text-nature-green transition-colors">
+                      {category.name}
+                    </h3>
+                    <span className={`text-xs px-2 py-1 rounded-full ${category.color}`}>
+                      {category.count} สินค้า
+                    </span>
+                  </Link>
+                ))}
+              </div>
 
-          <div className="text-center">
-            <Link
-              to="/products"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg font-medium transition-colors duration-200"
-            >
-              <Search className="w-4 h-4" />
-              ดูสินค้าทั้งหมด
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+              <div className="text-center">
+                <Link
+                  to="/products"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg font-medium transition-colors duration-200"
+                >
+                  <Search className="w-4 h-4" />
+                  ดูสินค้าทั้งหมด
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
