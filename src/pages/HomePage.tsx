@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MessageSquare, ShoppingBag, Users, TrendingUp, Star, ArrowRight, Leaf, Shield, Truck, Heart, MapPin, Package, Search, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { productService, type Product, type CategoryWithCount } from '../services/productService';
+import { statsService, type AppStats } from '../services/statsService';
 
 const featuredProducts: Product[] = [
   {
@@ -121,10 +122,18 @@ export const HomePage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [stats, setStats] = useState<AppStats>({
+    farmers: 0,
+    customers: 0,
+    products: 0,
+    averageRating: 0
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   // Load categories with counts from database
   useEffect(() => {
     loadCategoriesWithCounts();
+    loadAppStats();
   }, []);
 
   const loadCategoriesWithCounts = async () => {
@@ -145,6 +154,19 @@ export const HomePage: React.FC = () => {
       ]);
     } finally {
       setLoadingCategories(false);
+    }
+  };
+
+  const loadAppStats = async () => {
+    try {
+      setLoadingStats(true);
+      const appStats = await statsService.getAppStats();
+      setStats(appStats);
+    } catch (error) {
+      console.error('Failed to load app stats:', error);
+      // Keep default values if loading fails
+    } finally {
+      setLoadingStats(false);
     }
   };
 
@@ -175,11 +197,28 @@ export const HomePage: React.FC = () => {
     }
   ];
 
-  const stats = [
-    { number: '1,000+', label: 'เกษตรกร', icon: Users },
-    { number: '5,000+', label: 'ลูกค้า', icon: ShoppingBag },
-    { number: '10,000+', label: 'สินค้า', icon: Leaf },
-    { number: '4.8', label: 'คะแนนเฉลี่ย', icon: Star }
+  // Dynamic stats with real data
+  const dynamicStats = [
+    { 
+      number: loadingStats ? '...' : statsService.formatCount(stats.farmers), 
+      label: 'เกษตรกร', 
+      icon: Users 
+    },
+    { 
+      number: loadingStats ? '...' : statsService.formatCount(stats.customers), 
+      label: 'ลูกค้า', 
+      icon: ShoppingBag 
+    },
+    { 
+      number: loadingStats ? '...' : statsService.formatCount(stats.products), 
+      label: 'สินค้า', 
+      icon: Leaf 
+    },
+    { 
+      number: loadingStats ? '...' : statsService.formatRating(stats.averageRating), 
+      label: 'คะแนนเฉลี่ย', 
+      icon: Star 
+    }
   ];
 
   const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
@@ -359,15 +398,21 @@ export const HomePage: React.FC = () => {
             )}
           </div>
 
-          {/* Stats */}
+          {/* Dynamic Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            {stats.map((stat, index) => {
+            {dynamicStats.map((stat, index) => {
               const IconComponent = stat.icon;
               return (
                 <div key={index} className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
                   <IconComponent className="w-8 h-8 text-nature-green mx-auto mb-3" />
                   <div className="text-2xl font-bold text-nature-dark-green mb-1">
-                    {stat.number}
+                    {loadingStats ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-nature-green" />
+                      </div>
+                    ) : (
+                      stat.number
+                    )}
                   </div>
                   <div className="text-sm text-cool-gray">
                     {stat.label}
