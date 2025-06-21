@@ -76,6 +76,15 @@ interface FarmerInfo {
   Address: string;
 }
 
+// Set user context for RLS policies
+const setUserContext = async (userId: number) => {
+  await supabase.rpc('set_config', {
+    setting_name: 'app.current_user_id',
+    setting_value: userId.toString(),
+    is_local: true
+  });
+};
+
 // Convert database product to frontend format
 const convertToProduct = (dbProduct: Farm2HandProduct, farmerInfo: FarmerInfo): Product => {
   // Simplified logic: Product is available if it has stock AND is marked as in_stock
@@ -313,6 +322,9 @@ export const productService = {
   // Create new product
   async createProduct(farmerId: number, productData: CreateProductData): Promise<Product> {
     try {
+      // Set user context for RLS
+      await setUserContext(farmerId);
+
       const dbData = convertCreateDataToDb(farmerId, productData);
 
       const { data: insertedProduct, error } = await supabase
@@ -346,6 +358,9 @@ export const productService = {
   // Update product with simplified stock management
   async updateProduct(productId: number, farmerId: number, updates: UpdateProductData): Promise<Product> {
     try {
+      // Set user context for RLS
+      await setUserContext(farmerId);
+
       // Verify ownership
       const { data: existingProduct, error: ownershipError } = await supabase
         .from('Farm2Hand_product')
@@ -404,7 +419,7 @@ export const productService = {
         }
       }
 
-      // Update the product (without complex joins)
+      // Update the product
       const { data: updatedProducts, error } = await supabase
         .from('Farm2Hand_product')
         .update(updateData)
@@ -417,7 +432,32 @@ export const productService = {
       }
 
       if (!updatedProducts || updatedProducts.length === 0) {
-        throw new Error('ไม่พบสินค้าที่อัปเดต');
+        // If the update didn't return data, try to fetch the product separately
+        const { data: refetchedProduct, error: refetchError } = await supabase
+          .from('Farm2Hand_product')
+          .select('*')
+          .eq('id', productId)
+          .single();
+
+        if (refetchError || !refetchedProduct) {
+          console.error('Refetch error:', refetchError);
+          throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูลสินค้าที่อัปเดต');
+        }
+
+        // Fetch farmer information separately
+        const { data: farmerData, error: farmerError } = await supabase
+          .from('Farm2Hand_user')
+          .select('id, Name, Address')
+          .eq('id', refetchedProduct.product_owner)
+          .single();
+
+        if (farmerError) {
+          console.error('Farmer fetch error:', farmerError);
+          throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูลเกษตรกร');
+        }
+
+        const farmerInfo: FarmerInfo = farmerData;
+        return convertToProduct(refetchedProduct as Farm2HandProduct, farmerInfo);
       }
 
       const updatedProduct = updatedProducts[0] as Farm2HandProduct;
@@ -569,6 +609,9 @@ export const productService = {
   // Delete product
   async deleteProduct(productId: number, farmerId: number): Promise<void> {
     try {
+      // Set user context for RLS
+      await setUserContext(farmerId);
+
       // Verify ownership
       const { data: existingProduct, error: ownershipError } = await supabase
         .from('Farm2Hand_product')
