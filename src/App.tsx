@@ -14,10 +14,12 @@ import { useAuth } from './contexts/AuthContext';
 const AuthenticatedLanding: React.FC = () => {
   const { isAuthenticated } = useAuth();
   
+  // If user is authenticated, redirect to products page
   if (isAuthenticated) {
     return <Navigate to="/products" replace />;
   }
   
+  // If not authenticated, show home page
   return <HomePage />;
 };
 
