@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Filter, Star, MapPin, ShoppingCart, Heart, Package, Grid, List, ChevronDown, X, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { customerService } from '../services/customerService';
@@ -17,6 +18,7 @@ const locations = ['ทั้งหมด', 'จ.เชียงใหม่', '
 
 export const ProductsPage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>(['ทั้งหมด']);
@@ -36,6 +38,17 @@ export const ProductsPage: React.FC = () => {
     inStock: true,
     sortBy: 'name'
   });
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get('category');
+    if (categoryFromUrl) {
+      setFilters(prev => ({
+        ...prev,
+        category: decodeURIComponent(categoryFromUrl)
+      }));
+    }
+  }, [searchParams]);
 
   // Load products and categories
   useEffect(() => {
@@ -178,6 +191,18 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleCategoryClick = (categoryName: string) => {
+    setFilters(prev => ({ ...prev, category: categoryName }));
+    
+    // Update URL parameters
+    if (categoryName === 'ทั้งหมด') {
+      searchParams.delete('category');
+    } else {
+      searchParams.set('category', encodeURIComponent(categoryName));
+    }
+    setSearchParams(searchParams);
+  };
+
   const resetFilters = () => {
     setFilters({
       category: 'ทั้งหมด',
@@ -188,6 +213,10 @@ export const ProductsPage: React.FC = () => {
       sortBy: 'name'
     });
     setSearchTerm('');
+    
+    // Clear URL parameters
+    searchParams.delete('category');
+    setSearchParams(searchParams);
   };
 
   const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
@@ -359,6 +388,11 @@ export const ProductsPage: React.FC = () => {
           </h1>
           <p className="text-cool-gray">
             ค้นพบสินค้าเกษตรคุณภาพดีจากเกษตรกรทั่วประเทศ
+            {filters.category !== 'ทั้งหมด' && (
+              <span className="ml-2 px-3 py-1 bg-nature-green/10 text-nature-dark-green rounded-full text-sm font-medium">
+                หมวดหมู่: {filters.category}
+              </span>
+            )}
           </p>
         </div>
 
@@ -367,10 +401,29 @@ export const ProductsPage: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6 mb-6">
             <h2 className="text-lg font-semibold text-nature-dark-green mb-4">หมวดหมู่สินค้า</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categoriesWithCounts.slice(0, 6).map((category, index) => (
+              {/* All Categories Button */}
+              <button
+                onClick={() => handleCategoryClick('ทั้งหมด')}
+                className={`p-4 rounded-lg border transition-all duration-200 text-center ${
+                  filters.category === 'ทั้งหมด'
+                    ? 'border-nature-green bg-nature-green/10'
+                    : 'border-border-beige hover:border-nature-green/50 hover:bg-nature-green/5'
+                }`}
+              >
+                <div className="text-2xl mb-2">📦</div>
+                <h3 className="font-medium text-nature-dark-green text-sm mb-1">
+                  ทั้งหมด
+                </h3>
+                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+                  {products.length} สินค้า
+                </span>
+              </button>
+
+              {/* Category Buttons */}
+              {categoriesWithCounts.slice(0, 5).map((category, index) => (
                 <button
                   key={index}
-                  onClick={() => setFilters(prev => ({ ...prev, category: category.name }))}
+                  onClick={() => handleCategoryClick(category.name)}
                   className={`p-4 rounded-lg border transition-all duration-200 text-center ${
                     filters.category === category.name
                       ? 'border-nature-green bg-nature-green/10'
@@ -453,7 +506,7 @@ export const ProductsPage: React.FC = () => {
                   </label>
                   <select
                     value={filters.category}
-                    onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
+                    onChange={(e) => handleCategoryClick(e.target.value)}
                     className="w-full px-3 py-2 border border-border-beige rounded-lg focus:outline-none focus:ring-2 focus:ring-nature-green"
                   >
                     {categories.map(category => (
