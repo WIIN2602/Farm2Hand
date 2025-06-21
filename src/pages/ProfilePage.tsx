@@ -206,25 +206,26 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const getStockStatusInfo = (product: Product) => {
-    // Simplified logic: Only two states
-    if (product.stock === 0 || !product.inStock) {
+  // Simplified two-button system
+  const getProductButtonInfo = (product: Product) => {
+    const hasStock = product.stock > 0;
+    const isAvailable = hasStock && product.inStock;
+
+    if (isAvailable) {
+      // Product is available for sale - show green "เปิดขาย" button
       return {
-        status: 'หมด',
-        color: 'bg-red-100 text-red-700',
-        buttonText: 'หมด',
-        buttonColor: 'bg-red-100 text-red-700',
-        canToggle: product.stock > 0, // Can only toggle if there's stock
-        message: product.stock === 0 ? 'สินค้าหมด - ไม่สามารถเปิดขายได้' : 'คลิกเพื่อเปิดขาย'
+        text: 'เปิดขาย',
+        color: 'bg-nature-green hover:bg-nature-dark-green text-white',
+        canClick: true,
+        statusColor: 'bg-nature-green/10 text-nature-green'
       };
     } else {
+      // Product is not available - show red "หมด" button
       return {
-        status: 'เปิดขาย',
-        color: 'bg-nature-green/10 text-nature-green',
-        buttonText: 'ปิดขาย',
-        buttonColor: 'bg-red-100 text-red-700 hover:bg-red-200',
-        canToggle: true,
-        message: 'คลิกเพื่อปิดขาย'
+        text: 'หมด',
+        color: 'bg-red-500 hover:bg-red-600 text-white',
+        canClick: hasStock, // Can only click if there's stock to reopen
+        statusColor: 'bg-red-100 text-red-700'
       };
     }
   };
@@ -577,7 +578,7 @@ export const ProfilePage: React.FC = () => {
                 ) : farmerProducts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {farmerProducts.map((product) => {
-                      const stockInfo = getStockStatusInfo(product);
+                      const buttonInfo = getProductButtonInfo(product);
                       const isUpdating = updatingProduct === product.id;
                       
                       return (
@@ -590,7 +591,7 @@ export const ProfilePage: React.FC = () => {
                             />
                             
                             {/* Stock Status Overlay */}
-                            {(product.stock === 0 || !product.inStock) && (
+                            {!product.inStock && (
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                                 <span className="text-white text-xs font-medium bg-red-500 px-2 py-1 rounded-full">
                                   หมด
@@ -616,40 +617,38 @@ export const ProfilePage: React.FC = () => {
                               <span>รีวิว: {product.reviews}</span>
                             </div>
                             
-                            {/* Stock Status Info */}
+                            {/* Status Badge */}
                             <div className="mb-3">
-                              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stockInfo.color}`}>
-                                {(product.stock === 0 || !product.inStock) && <AlertTriangle className="w-3 h-3" />}
-                                <span>{stockInfo.status}</span>
+                              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${buttonInfo.statusColor}`}>
+                                <span>{buttonInfo.text}</span>
                               </div>
-                              {product.stock === 0 && (
-                                <p className="text-xs text-red-600 mt-1">{stockInfo.message}</p>
-                              )}
                             </div>
                             
                             {/* Product Actions */}
                             <div className="flex gap-2">
+                              {/* Main Status Button */}
                               <button
                                 onClick={() => handleToggleStock(product.id)}
-                                disabled={!stockInfo.canToggle || isUpdating}
-                                title={stockInfo.message}
+                                disabled={!buttonInfo.canClick || isUpdating}
                                 className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 flex items-center justify-center gap-1 ${
-                                  !stockInfo.canToggle
+                                  !buttonInfo.canClick
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : stockInfo.buttonColor
+                                    : buttonInfo.color
                                 }`}
                               >
                                 {isUpdating ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
-                                  <>
-                                    {stockInfo.buttonText}
-                                  </>
+                                  buttonInfo.text
                                 )}
                               </button>
+                              
+                              {/* Edit Button */}
                               <button className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium transition-colors duration-200">
                                 <Edit className="w-3 h-3" />
                               </button>
+                              
+                              {/* Delete Button */}
                               <button 
                                 onClick={() => handleDeleteProduct(product.id)}
                                 className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs font-medium transition-colors duration-200"
