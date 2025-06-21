@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus, Heart, UserPlus, ShoppingBag, Loader2, Search } from 'lucide-react';
+import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus, Heart, UserPlus, ShoppingBag, Loader2, Search, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { customerService, type CustomerData } from '../services/customerService';
+import { productService, type Product } from '../services/productService';
 import { SearchModal } from '../components/SearchModal';
+import { AddProductModal } from '../components/AddProductModal';
 
 interface FarmerProfile {
   id: string;
@@ -24,36 +26,6 @@ interface FarmerProfile {
   coverImage: string;
 }
 
-const mockProducts = [
-  {
-    id: 1,
-    name: 'ผักกาดหอมออร์แกนิค',
-    price: 45,
-    unit: 'ถุง',
-    image: 'https://images.pexels.com/photos/1656663/pexels-photo-1656663.jpeg?auto=compress&cs=tinysrgb&w=300',
-    stock: 25,
-    sold: 150
-  },
-  {
-    id: 2,
-    name: 'มะเขือเทศราชินี',
-    price: 80,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=300',
-    stock: 30,
-    sold: 89
-  },
-  {
-    id: 3,
-    name: 'แครอทเบบี้',
-    price: 95,
-    unit: 'กก.',
-    image: 'https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=300',
-    stock: 15,
-    sold: 67
-  }
-];
-
 export const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -61,6 +33,9 @@ export const ProfilePage: React.FC = () => {
   const [loadingCustomerData, setLoadingCustomerData] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchType, setSearchType] = useState<'favorites' | 'following'>('favorites');
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [farmerProducts, setFarmerProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -72,6 +47,8 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (user?.role === 'customer') {
       loadCustomerData();
+    } else if (user?.role === 'farmer') {
+      loadFarmerProducts();
     }
   }, [user]);
 
@@ -89,6 +66,20 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  const loadFarmerProducts = async () => {
+    if (!user || user.role !== 'farmer') return;
+    
+    setLoadingProducts(true);
+    try {
+      const products = await productService.getProductsByFarmer(user.id);
+      setFarmerProducts(products);
+    } catch (error) {
+      console.error('Failed to load farmer products:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
   // Mock profile data based on user role
   const mockFarmerProfile: FarmerProfile = {
     id: user?.id?.toString() || '1',
@@ -101,7 +92,7 @@ export const ProfilePage: React.FC = () => {
     joinDate: user?.createdAt?.toISOString() || '2023-01-15',
     rating: 4.8,
     totalSales: 125000,
-    activeProducts: 12,
+    activeProducts: farmerProducts.length,
     followers: 234,
     bio: 'เกษตรกรรุ่นใหม่ที่มุ่งมั่นในการปลูกผักออร์แกนิคคุณภาพสูง ด้วยประสบการณ์กว่า 10 ปี ในการทำเกษตรแบบยั่งยืน',
     specialties: ['ผักใบเขียว', 'ผลไม้ตามฤดูกาล', 'สมุนไพร'],
@@ -177,6 +168,38 @@ export const ProfilePage: React.FC = () => {
 
   const handleSearchModalUpdate = () => {
     loadCustomerData(); // Reload customer data when search modal updates
+  };
+
+  const handleProductAdded = () => {
+    loadFarmerProducts(); // Reload farmer products when new product is added
+  };
+
+  const handleDeleteProduct = async (productId: number) => {
+    if (!user || user.role !== 'farmer') return;
+    
+    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบสินค้านี้?')) {
+      return;
+    }
+
+    try {
+      await productService.deleteProduct(productId, user.id);
+      loadFarmerProducts(); // Reload products after deletion
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      alert('เกิดข้อผิดพลาดในการลบสินค้า');
+    }
+  };
+
+  const handleToggleStock = async (productId: number, currentStock: boolean) => {
+    if (!user || user.role !== 'farmer') return;
+    
+    try {
+      await productService.updateProduct(productId, user.id, { inStock: !currentStock });
+      loadFarmerProducts(); // Reload products after update
+    } catch (error) {
+      console.error('Failed to update product stock:', error);
+      alert('เกิดข้อผิดพลาดในการอัปเดตสถานะสินค้า');
+    }
   };
 
   const currentProfile = isEditing ? { ...profile, ...editedProfile } : profile;
@@ -510,31 +533,93 @@ export const ProfilePage: React.FC = () => {
               <div className="bg-white rounded-xl shadow-sm border border-border-beige p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-nature-dark-green">สินค้าของฉัน</h2>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg transition-colors duration-200">
+                  <button 
+                    onClick={() => setShowAddProductModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg transition-colors duration-200"
+                  >
                     <Plus className="w-4 h-4" />
                     <span className="font-medium">เพิ่มสินค้า</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {mockProducts.map((product) => (
-                    <div key={product.id} className="border border-border-beige rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-32 object-cover"
-                      />
-                      <div className="p-3">
-                        <h4 className="font-medium text-nature-dark-green mb-1">{product.name}</h4>
-                        <p className="text-fresh-orange font-bold">฿{product.price}/{product.unit}</p>
-                        <div className="flex justify-between text-xs text-cool-gray mt-2">
-                          <span>คงเหลือ: {product.stock}</span>
-                          <span>ขายแล้ว: {product.sold}</span>
+                {loadingProducts ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-nature-green" />
+                    <span className="ml-2 text-cool-gray">กำลังโหลดสินค้า...</span>
+                  </div>
+                ) : farmerProducts.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {farmerProducts.map((product) => (
+                      <div key={product.id} className="border border-border-beige rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200">
+                        <div className="relative">
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-32 object-cover"
+                          />
+                          {!product.inStock && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <span className="text-white text-xs font-medium bg-red-500 px-2 py-1 rounded-full">
+                                หมด
+                              </span>
+                            </div>
+                          )}
+                          {product.organic && (
+                            <div className="absolute top-2 left-2">
+                              <span className="text-xs px-2 py-1 bg-nature-green text-white rounded-full">
+                                ออร์แกนิค
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <h4 className="font-medium text-nature-dark-green mb-1 text-sm truncate">{product.name}</h4>
+                          <p className="text-fresh-orange font-bold text-sm">฿{product.price}/{product.unit}</p>
+                          <div className="flex justify-between text-xs text-cool-gray mt-2 mb-3">
+                            <span>คงเหลือ: {product.stock}</span>
+                            <span>รีวิว: {product.reviews}</span>
+                          </div>
+                          
+                          {/* Product Actions */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleToggleStock(product.id, product.inStock)}
+                              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 ${
+                                product.inStock
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  : 'bg-nature-green/10 text-nature-green hover:bg-nature-green/20'
+                              }`}
+                            >
+                              {product.inStock ? 'ปิดขาย' : 'เปิดขาย'}
+                            </button>
+                            <button className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium transition-colors duration-200">
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteProduct(product.id)}
+                              className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs font-medium transition-colors duration-200"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Package className="w-12 h-12 text-cool-gray/30 mx-auto mb-3" />
+                    <p className="text-cool-gray mb-2">ยังไม่มีสินค้า</p>
+                    <p className="text-sm text-cool-gray/70 mb-4">เริ่มเพิ่มสินค้าแรกของคุณ</p>
+                    <button
+                      onClick={() => setShowAddProductModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-nature-green hover:bg-nature-dark-green text-white rounded-lg transition-colors duration-200"
+                    >
+                      <Plus className="w-4 h-4" />
+                      เพิ่มสินค้า
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -624,9 +709,12 @@ export const ProfilePage: React.FC = () => {
                       <span className="text-nature-dark-green">ดูสถิติการขาย</span>
                     </button>
                     
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
+                    <button 
+                      onClick={() => setShowAddProductModal(true)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200"
+                    >
                       <Package className="w-5 h-5 text-fresh-orange" />
-                      <span className="text-nature-dark-green">จัดการสินค้า</span>
+                      <span className="text-nature-dark-green">เพิ่มสินค้าใหม่</span>
                     </button>
                     
                     <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
@@ -670,6 +758,13 @@ export const ProfilePage: React.FC = () => {
         onClose={() => setShowSearchModal(false)}
         type={searchType}
         onUpdate={handleSearchModalUpdate}
+      />
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        isOpen={showAddProductModal}
+        onClose={() => setShowAddProductModal(false)}
+        onProductAdded={handleProductAdded}
       />
     </div>
   );
