@@ -207,26 +207,24 @@ export const ProfilePage: React.FC = () => {
   };
 
   const getStockStatusInfo = (product: Product) => {
-    if (product.stock === 0) {
+    // Simplified logic: Only two states
+    if (product.stock === 0 || !product.inStock) {
       return {
         status: 'หมด',
         color: 'bg-red-100 text-red-700',
-        canToggle: false,
-        message: 'สินค้าหมด - ไม่สามารถเปิดขายได้'
-      };
-    } else if (product.inStock) {
-      return {
-        status: 'เปิดขาย',
-        color: 'bg-nature-green/10 text-nature-green',
-        canToggle: true,
-        message: 'คลิกเพื่อปิดขาย'
+        buttonText: 'หมด',
+        buttonColor: 'bg-red-100 text-red-700',
+        canToggle: product.stock > 0, // Can only toggle if there's stock
+        message: product.stock === 0 ? 'สินค้าหมด - ไม่สามารถเปิดขายได้' : 'คลิกเพื่อเปิดขาย'
       };
     } else {
       return {
-        status: 'ปิดขาย',
-        color: 'bg-gray-100 text-gray-700',
+        status: 'เปิดขาย',
+        color: 'bg-nature-green/10 text-nature-green',
+        buttonText: 'ปิดขาย',
+        buttonColor: 'bg-red-100 text-red-700 hover:bg-red-200',
         canToggle: true,
-        message: 'คลิกเพื่อเปิดขาย'
+        message: 'คลิกเพื่อปิดขาย'
       };
     }
   };
@@ -592,7 +590,7 @@ export const ProfilePage: React.FC = () => {
                             />
                             
                             {/* Stock Status Overlay */}
-                            {product.stock === 0 && (
+                            {(product.stock === 0 || !product.inStock) && (
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                                 <span className="text-white text-xs font-medium bg-red-500 px-2 py-1 rounded-full">
                                   หมด
@@ -621,7 +619,7 @@ export const ProfilePage: React.FC = () => {
                             {/* Stock Status Info */}
                             <div className="mb-3">
                               <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stockInfo.color}`}>
-                                {product.stock === 0 && <AlertTriangle className="w-3 h-3" />}
+                                {(product.stock === 0 || !product.inStock) && <AlertTriangle className="w-3 h-3" />}
                                 <span>{stockInfo.status}</span>
                               </div>
                               {product.stock === 0 && (
@@ -638,16 +636,14 @@ export const ProfilePage: React.FC = () => {
                                 className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 flex items-center justify-center gap-1 ${
                                   !stockInfo.canToggle
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : product.inStock
-                                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                    : 'bg-nature-green/10 text-nature-green hover:bg-nature-green/20'
+                                    : stockInfo.buttonColor
                                 }`}
                               >
                                 {isUpdating ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : (
                                   <>
-                                    {product.stock === 0 ? 'หมด' : product.inStock ? 'ปิดขาย' : 'เปิดขาย'}
+                                    {stockInfo.buttonText}
                                   </>
                                 )}
                               </button>

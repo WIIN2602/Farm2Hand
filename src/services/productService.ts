@@ -78,7 +78,8 @@ interface FarmerInfo {
 
 // Convert database product to frontend format
 const convertToProduct = (dbProduct: Farm2HandProduct, farmerInfo: FarmerInfo): Product => {
-  // Auto-determine stock status: if stock is 0, product should be out of stock
+  // Simplified logic: Product is available if it has stock AND is marked as in_stock
+  // Product is unavailable if it has no stock OR is manually closed by farmer
   const actualInStock = (dbProduct.product_stock || 0) > 0 && (dbProduct.in_stock !== false);
   
   return {
@@ -342,7 +343,7 @@ export const productService = {
     }
   },
 
-  // Update product with enhanced stock management
+  // Update product with simplified stock management
   async updateProduct(productId: number, farmerId: number, updates: UpdateProductData): Promise<Product> {
     try {
       // Verify ownership
@@ -383,7 +384,7 @@ export const productService = {
         updateData.in_stock = updates.stock > 0;
       }
 
-      // Handle manual in_stock toggle (farmer clicking เปิดขาย/ปิดขาย)
+      // Handle manual in_stock toggle (farmer clicking button)
       if (updates.inStock !== undefined) {
         const currentStock = existingProduct.product_stock || 0;
         
@@ -432,7 +433,7 @@ export const productService = {
     }
   },
 
-  // Toggle stock status with enhanced logic
+  // Toggle stock status with simplified logic (only two states)
   async toggleProductStock(productId: number, farmerId: number): Promise<Product> {
     try {
       // Get current product state
@@ -457,17 +458,18 @@ export const productService = {
       let newInStock: boolean;
       let errorMessage: string | null = null;
 
-      if (currentInStock) {
-        // Currently in stock - farmer wants to close sale
+      // Simplified logic: If currently available (green), make unavailable (red)
+      // If currently unavailable (red), try to make available (green) if stock exists
+      if (currentStock > 0 && currentInStock) {
+        // Currently available - farmer wants to close sale
         newInStock = false;
+      } else if (currentStock > 0 && !currentInStock) {
+        // Currently closed but has stock - farmer wants to open sale
+        newInStock = true;
       } else {
-        // Currently out of stock - farmer wants to open sale
-        if (currentStock > 0) {
-          newInStock = true;
-        } else {
-          newInStock = false;
-          errorMessage = 'ไม่สามารถเปิดขายได้เนื่องจากสินค้าหมด กรุณาเพิ่มสต็อกก่อน';
-        }
+        // No stock - cannot open for sale
+        newInStock = false;
+        errorMessage = 'ไม่สามารถเปิดขายได้เนื่องจากสินค้าหมด กรุณาเพิ่มสต็อกก่อน';
       }
 
       if (errorMessage) {
