@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { customerService } from '../services/customerService';
 import type { UserProfile } from '../lib/supabase';
@@ -147,6 +148,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Store user data
       localStorage.setItem('farm2hand_user', JSON.stringify(user));
       dispatch({ type: 'AUTH_SUCCESS', payload: user });
+      
+      // Navigation will be handled by the AuthenticatedLanding component
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
       dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
@@ -169,6 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Store user data
       localStorage.setItem('farm2hand_user', JSON.stringify(user));
       dispatch({ type: 'AUTH_SUCCESS', payload: user });
+      
+      // Navigation will be handled by the AuthenticatedLanding component
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
       dispatch({ type: 'AUTH_ERROR', payload: errorMessage });

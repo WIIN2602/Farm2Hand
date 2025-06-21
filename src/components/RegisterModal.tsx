@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Briefcase, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { RegisterData } from '../types/auth';
@@ -11,6 +12,7 @@ interface RegisterModalProps {
 
 export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitchToLogin }) => {
   const { register, isLoading, error } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<RegisterData>({
     email: '',
     password: '',
@@ -39,6 +41,8 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, o
         location: '',
         farmName: '',
       });
+      // Navigate to products page after successful registration
+      navigate('/products');
     } catch (error) {
       // Error is handled by the auth context
     }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Navigation } from './components/Navigation';
 import { ChatbotPopup } from './components/ChatbotPopup';
@@ -8,6 +8,18 @@ import { ChatbotPage } from './pages/ChatbotPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ProductsPage } from './pages/ProductsPage';
 import { HomePage } from './pages/HomePage';
+import { useAuth } from './contexts/AuthContext';
+
+// Component to handle authenticated user redirection
+const AuthenticatedLanding: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  
+  if (isAuthenticated) {
+    return <Navigate to="/products" replace />;
+  }
+  
+  return <HomePage />;
+};
 
 function App() {
   return (
@@ -15,7 +27,7 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-soft-beige to-light-beige">
         <Navigation />
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<AuthenticatedLanding />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route 
             path="/profile" 

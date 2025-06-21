@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import type { LoginCredentials } from '../types/auth';
@@ -11,6 +12,7 @@ interface LoginModalProps {
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegister }) => {
   const { login, isLoading, error } = useAuth();
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
     password: '',
@@ -23,6 +25,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitc
       await login(credentials);
       onClose();
       setCredentials({ email: '', password: '' });
+      // Navigate to products page after successful login
+      navigate('/products');
     } catch (error) {
       // Error is handled by the auth context
     }
