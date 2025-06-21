@@ -78,6 +78,9 @@ interface FarmerInfo {
 
 // Convert database product to frontend format
 const convertToProduct = (dbProduct: Farm2HandProduct, farmerInfo: FarmerInfo): Product => {
+  // Auto-determine stock status: if stock is 0, product should be out of stock
+  const actualInStock = (dbProduct.product_stock || 0) > 0 && (dbProduct.in_stock !== false);
+  
   return {
     id: dbProduct.id,
     name: dbProduct.product_name || '',
@@ -89,7 +92,7 @@ const convertToProduct = (dbProduct: Farm2HandProduct, farmerInfo: FarmerInfo): 
     location: farmerInfo.Address || 'Unknown Location',
     rating: dbProduct.product_rating ? dbProduct.product_rating / 10 : 0, // Convert from integer to decimal
     reviews: dbProduct.product_reviews || 0,
-    inStock: dbProduct.in_stock || false,
+    inStock: actualInStock,
     category: dbProduct.product_category || '',
     description: dbProduct.product_description || '',
     organic: dbProduct.product_organic || false,
@@ -101,6 +104,9 @@ const convertToProduct = (dbProduct: Farm2HandProduct, farmerInfo: FarmerInfo): 
 
 // Convert create data to database format
 const convertCreateDataToDb = (farmerId: number, data: CreateProductData): Partial<Farm2HandProduct> => {
+  // Auto-set in_stock based on stock quantity
+  const inStock = data.stock > 0;
+  
   return {
     product_name: data.name,
     product_price: data.price,
@@ -115,7 +121,7 @@ const convertCreateDataToDb = (farmerId: number, data: CreateProductData): Parti
     product_owner: farmerId,
     product_rating: 45, // Default rating (4.5 out of 5)
     product_reviews: 0,
-    in_stock: data.stock > 0,
+    in_stock: inStock,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -336,13 +342,13 @@ export const productService = {
     }
   },
 
-  // Update product
+  // Update product with enhanced stock management
   async updateProduct(productId: number, farmerId: number, updates: UpdateProductData): Promise<Product> {
     try {
       // Verify ownership
       const { data: existingProduct, error: ownershipError } = await supabase
         .from('Farm2Hand_product')
-        .select('product_owner')
+        .select('product_owner, product_stock')
         .eq('id', productId)
         .single();
 
@@ -366,14 +372,36 @@ export const productService = {
       if (updates.category !== undefined) updateData.product_category = updates.category;
       if (updates.description !== undefined) updateData.product_description = updates.description;
       if (updates.image !== undefined) updateData.product_image = updates.image;
-      if (updates.stock !== undefined) {
-        updateData.product_stock = updates.stock;
-        updateData.in_stock = updates.stock > 0;
-      }
       if (updates.organic !== undefined) updateData.product_organic = updates.organic;
       if (updates.discount !== undefined) updateData.product_discount = updates.discount > 0 ? updates.discount : null;
       if (updates.tags !== undefined) updateData.product_tag = updates.tags.length > 0 ? updates.tags.join(',') : null;
-      if (updates.inStock !== undefined) updateData.in_stock = updates.inStock;
+
+      // Handle stock updates with automatic in_stock management
+      if (updates.stock !== undefined) {
+        updateData.product_stock = updates.stock;
+        // Auto-set in_stock based on stock quantity
+        updateData.in_stock = updates.stock > 0;
+      }
+
+      // Handle manual in_stock toggle (farmer clicking เปิดขาย/ปิดขาย)
+      if (updates.inStock !== undefined) {
+        const currentStock = existingProduct.product_stock || 0;
+        
+        if (updates.inStock === true) {
+          // Farmer wants to open for sale
+          if (currentStock > 0) {
+            // Stock available - allow opening for sale
+            updateData.in_stock = true;
+          } else {
+            // No stock - cannot open for sale, force to false
+            updateData.in_stock = false;
+            throw new Error('ไม่สามารถเปิดขายได้เนื่องจากสินค้าหมด กรุณาเพิ่มสต็อกก่อน');
+          }
+        } else {
+          // Farmer wants to close for sale - always allow
+          updateData.in_stock = false;
+        }
+      }
 
       const { data: updatedProduct, error } = await supabase
         .from('Farm2Hand_product')
@@ -401,6 +429,123 @@ export const productService = {
         throw error;
       }
       throw new Error('เกิดข้อผิดพลาดในการอัปเดตสินค้า');
+    }
+  },
+
+  // Toggle stock status with enhanced logic
+  async toggleProductStock(productId: number, farmerId: number): Promise<Product> {
+    try {
+      // Get current product state
+      const { data: currentProduct, error: fetchError } = await supabase
+        .from('Farm2Hand_product')
+        .select('product_owner, product_stock, in_stock')
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        throw new Error('ไม่พบสินค้าที่ต้องการแก้ไข');
+      }
+
+      if (currentProduct.product_owner !== farmerId) {
+        throw new Error('คุณไม่มีสิทธิ์แก้ไขสินค้านี้');
+      }
+
+      const currentStock = currentProduct.product_stock || 0;
+      const currentInStock = currentProduct.in_stock;
+
+      let newInStock: boolean;
+      let errorMessage: string | null = null;
+
+      if (currentInStock) {
+        // Currently in stock - farmer wants to close sale
+        newInStock = false;
+      } else {
+        // Currently out of stock - farmer wants to open sale
+        if (currentStock > 0) {
+          newInStock = true;
+        } else {
+          newInStock = false;
+          errorMessage = 'ไม่สามารถเปิดขายได้เนื่องจากสินค้าหมด กรุณาเพิ่มสต็อกก่อน';
+        }
+      }
+
+      if (errorMessage) {
+        throw new Error(errorMessage);
+      }
+
+      // Update the product
+      return await this.updateProduct(productId, farmerId, { inStock: newInStock });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('เกิดข้อผิดพลาดในการเปลี่ยนสถานะสินค้า');
+    }
+  },
+
+  // Process product purchase (reduce stock)
+  async purchaseProduct(productId: number, quantity: number): Promise<Product> {
+    try {
+      // Get current product state
+      const { data: currentProduct, error: fetchError } = await supabase
+        .from('Farm2Hand_product')
+        .select(`
+          *,
+          Farm2Hand_user!Farm2Hand_product_product_owner_fkey (
+            id,
+            Name,
+            Address
+          )
+        `)
+        .eq('id', productId)
+        .single();
+
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        throw new Error('ไม่พบสินค้าที่ต้องการซื้อ');
+      }
+
+      const currentStock = currentProduct.product_stock || 0;
+      const newStock = currentStock - quantity;
+
+      if (newStock < 0) {
+        throw new Error('สินค้าไม่เพียงพอ');
+      }
+
+      // Update stock and auto-manage in_stock status
+      const updateData: Partial<Farm2HandProduct> = {
+        product_stock: newStock,
+        in_stock: newStock > 0 && currentProduct.in_stock, // Keep current in_stock preference if stock available
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: updatedProduct, error: updateError } = await supabase
+        .from('Farm2Hand_product')
+        .update(updateData)
+        .eq('id', productId)
+        .select(`
+          *,
+          Farm2Hand_user!Farm2Hand_product_product_owner_fkey (
+            id,
+            Name,
+            Address
+          )
+        `)
+        .single();
+
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw new Error('เกิดข้อผิดพลาดในการอัปเดตสต็อกสินค้า');
+      }
+
+      const farmerInfo = updatedProduct.Farm2Hand_user as FarmerInfo;
+      return convertToProduct(updatedProduct as Farm2HandProduct, farmerInfo);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('เกิดข้อผิดพลาดในการซื้อสินค้า');
     }
   },
 

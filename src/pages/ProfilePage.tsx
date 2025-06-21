@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus, Heart, UserPlus, ShoppingBag, Loader2, Search, Edit, Trash2 } from 'lucide-react';
+import { User, MapPin, Phone, Mail, Calendar, Star, Package, TrendingUp, DollarSign, Users, Edit3, Save, X, Camera, Plus, Heart, UserPlus, ShoppingBag, Loader2, Search, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { customerService, type CustomerData } from '../services/customerService';
 import { productService, type Product } from '../services/productService';
@@ -36,6 +36,7 @@ export const ProfilePage: React.FC = () => {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [farmerProducts, setFarmerProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [updatingProduct, setUpdatingProduct] = useState<number | null>(null);
   const [editedProfile, setEditedProfile] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -190,15 +191,43 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleToggleStock = async (productId: number, currentStock: boolean) => {
+  const handleToggleStock = async (productId: number) => {
     if (!user || user.role !== 'farmer') return;
     
+    setUpdatingProduct(productId);
     try {
-      await productService.updateProduct(productId, user.id, { inStock: !currentStock });
+      await productService.toggleProductStock(productId, user.id);
       loadFarmerProducts(); // Reload products after update
     } catch (error) {
       console.error('Failed to update product stock:', error);
-      alert('เกิดข้อผิดพลาดในการอัปเดตสถานะสินค้า');
+      alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการอัปเดตสถานะสินค้า');
+    } finally {
+      setUpdatingProduct(null);
+    }
+  };
+
+  const getStockStatusInfo = (product: Product) => {
+    if (product.stock === 0) {
+      return {
+        status: 'หมด',
+        color: 'bg-red-100 text-red-700',
+        canToggle: false,
+        message: 'สินค้าหมด - ไม่สามารถเปิดขายได้'
+      };
+    } else if (product.inStock) {
+      return {
+        status: 'เปิดขาย',
+        color: 'bg-nature-green/10 text-nature-green',
+        canToggle: true,
+        message: 'คลิกเพื่อปิดขาย'
+      };
+    } else {
+      return {
+        status: 'ปิดขาย',
+        color: 'bg-gray-100 text-gray-700',
+        canToggle: true,
+        message: 'คลิกเพื่อเปิดขาย'
+      };
     }
   };
 
@@ -549,62 +578,93 @@ export const ProfilePage: React.FC = () => {
                   </div>
                 ) : farmerProducts.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {farmerProducts.map((product) => (
-                      <div key={product.id} className="border border-border-beige rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200">
-                        <div className="relative">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-32 object-cover"
-                          />
-                          {!product.inStock && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <span className="text-white text-xs font-medium bg-red-500 px-2 py-1 rounded-full">
-                                หมด
-                              </span>
-                            </div>
-                          )}
-                          {product.organic && (
-                            <div className="absolute top-2 left-2">
-                              <span className="text-xs px-2 py-1 bg-nature-green text-white rounded-full">
-                                ออร์แกนิค
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-3">
-                          <h4 className="font-medium text-nature-dark-green mb-1 text-sm truncate">{product.name}</h4>
-                          <p className="text-fresh-orange font-bold text-sm">฿{product.price}/{product.unit}</p>
-                          <div className="flex justify-between text-xs text-cool-gray mt-2 mb-3">
-                            <span>คงเหลือ: {product.stock}</span>
-                            <span>รีวิว: {product.reviews}</span>
+                    {farmerProducts.map((product) => {
+                      const stockInfo = getStockStatusInfo(product);
+                      const isUpdating = updatingProduct === product.id;
+                      
+                      return (
+                        <div key={product.id} className="border border-border-beige rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200">
+                          <div className="relative">
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-32 object-cover"
+                            />
+                            
+                            {/* Stock Status Overlay */}
+                            {product.stock === 0 && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <span className="text-white text-xs font-medium bg-red-500 px-2 py-1 rounded-full">
+                                  หมด
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Organic Badge */}
+                            {product.organic && (
+                              <div className="absolute top-2 left-2">
+                                <span className="text-xs px-2 py-1 bg-nature-green text-white rounded-full">
+                                  ออร์แกนิค
+                                </span>
+                              </div>
+                            )}
                           </div>
                           
-                          {/* Product Actions */}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleToggleStock(product.id, product.inStock)}
-                              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 ${
-                                product.inStock
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                  : 'bg-nature-green/10 text-nature-green hover:bg-nature-green/20'
-                              }`}
-                            >
-                              {product.inStock ? 'ปิดขาย' : 'เปิดขาย'}
-                            </button>
-                            <button className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium transition-colors duration-200">
-                              <Edit className="w-3 h-3" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteProduct(product.id)}
-                              className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs font-medium transition-colors duration-200"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                          <div className="p-3">
+                            <h4 className="font-medium text-nature-dark-green mb-1 text-sm truncate">{product.name}</h4>
+                            <p className="text-fresh-orange font-bold text-sm">฿{product.price}/{product.unit}</p>
+                            <div className="flex justify-between text-xs text-cool-gray mt-2 mb-3">
+                              <span>คงเหลือ: {product.stock}</span>
+                              <span>รีวิว: {product.reviews}</span>
+                            </div>
+                            
+                            {/* Stock Status Info */}
+                            <div className="mb-3">
+                              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stockInfo.color}`}>
+                                {product.stock === 0 && <AlertTriangle className="w-3 h-3" />}
+                                <span>{stockInfo.status}</span>
+                              </div>
+                              {product.stock === 0 && (
+                                <p className="text-xs text-red-600 mt-1">{stockInfo.message}</p>
+                              )}
+                            </div>
+                            
+                            {/* Product Actions */}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleToggleStock(product.id)}
+                                disabled={!stockInfo.canToggle || isUpdating}
+                                title={stockInfo.message}
+                                className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 flex items-center justify-center gap-1 ${
+                                  !stockInfo.canToggle
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : product.inStock
+                                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                    : 'bg-nature-green/10 text-nature-green hover:bg-nature-green/20'
+                                }`}
+                              >
+                                {isUpdating ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <>
+                                    {product.stock === 0 ? 'หมด' : product.inStock ? 'ปิดขาย' : 'เปิดขาย'}
+                                  </>
+                                )}
+                              </button>
+                              <button className="px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-medium transition-colors duration-200">
+                                <Edit className="w-3 h-3" />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteProduct(product.id)}
+                                className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded text-xs font-medium transition-colors duration-200"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8">
