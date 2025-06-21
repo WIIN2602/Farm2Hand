@@ -404,18 +404,12 @@ export const productService = {
         }
       }
 
+      // Update the product (without complex joins)
       const { data: updatedProducts, error } = await supabase
         .from('Farm2Hand_product')
         .update(updateData)
         .eq('id', productId)
-        .select(`
-          *,
-          Farm2Hand_user!Farm2Hand_product_product_owner_fkey (
-            id,
-            Name,
-            Address
-          )
-        `);
+        .select('*');
 
       if (error) {
         console.error('Update error:', error);
@@ -426,9 +420,22 @@ export const productService = {
         throw new Error('ไม่พบสินค้าที่อัปเดต');
       }
 
-      const updatedProduct = updatedProducts[0];
-      const farmerInfo = updatedProduct.Farm2Hand_user as FarmerInfo;
-      return convertToProduct(updatedProduct as Farm2HandProduct, farmerInfo);
+      const updatedProduct = updatedProducts[0] as Farm2HandProduct;
+
+      // Fetch farmer information separately
+      const { data: farmerData, error: farmerError } = await supabase
+        .from('Farm2Hand_user')
+        .select('id, Name, Address')
+        .eq('id', updatedProduct.product_owner)
+        .single();
+
+      if (farmerError) {
+        console.error('Farmer fetch error:', farmerError);
+        throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูลเกษตรกร');
+      }
+
+      const farmerInfo: FarmerInfo = farmerData;
+      return convertToProduct(updatedProduct, farmerInfo);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
