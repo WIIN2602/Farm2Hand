@@ -6,6 +6,7 @@ import { productService, type Product } from '../services/productService';
 import { SearchModal } from '../components/SearchModal';
 import { AddProductModal } from '../components/AddProductModal';
 import { EditProductModal } from '../components/EditProductModal';
+import { OrderHistoryModal } from '../components/OrderHistoryModal';
 import { NotificationContainer } from '../components/NotificationPopup';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useNotification } from '../hooks/useNotification';
@@ -47,6 +48,7 @@ export const ProfilePage: React.FC = () => {
   const [searchType, setSearchType] = useState<'favorites' | 'following'>('favorites');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showEditProductModal, setShowEditProductModal] = useState(false);
+  const [showOrderHistoryModal, setShowOrderHistoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [farmerProducts, setFarmerProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -864,7 +866,10 @@ export const ProfilePage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200">
+                    <button 
+                      onClick={() => setShowOrderHistoryModal(true)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-soft-beige/30 rounded-lg transition-colors duration-200"
+                    >
                       <ShoppingBag className="w-5 h-5 text-fresh-orange" />
                       <span className="text-nature-dark-green">ประวัติการสั่งซื้อ</span>
                     </button>
@@ -931,6 +936,12 @@ export const ProfilePage: React.FC = () => {
         onClose={() => setShowEditProductModal(false)}
         onProductUpdated={handleProductUpdated}
         product={editingProduct}
+      />
+
+      {/* Order History Modal */}
+      <OrderHistoryModal
+        isOpen={showOrderHistoryModal}
+        onClose={() => setShowOrderHistoryModal(false)}
       />
     </div>
   );
