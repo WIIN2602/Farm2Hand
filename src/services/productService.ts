@@ -713,7 +713,7 @@ export const productService = {
       const categoriesWithCounts: CategoryWithCount[] = Object.entries(categoryCountMap).map(([name, count]) => ({
         name,
         count,
-        icon: categoryConfig[name]?.icon,
+        icon: categoryConfig[name]?.icon || '❌',
         color: categoryConfig[name]?.color || 'bg-gray-100 text-gray-700'
       }));
 
