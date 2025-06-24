@@ -71,17 +71,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitc
             </div>
           )}
 
-          {/* Demo Credentials */}
-          <div className="mb-4 p-3 bg-nature-green/10 border border-nature-green/20 rounded-lg">
-            <p className="text-xs font-medium text-nature-dark-green mb-2">ข้อมูลทดสอบ:</p>
-            <div className="text-xs text-nature-dark-green space-y-1">
-              <p><strong>เกษตรกร:</strong> farmer@test.com | รหัส: password123</p>
-              <p><strong>เกษตรกร:</strong> somchai@farm.com | รหัส: mypassword</p>
-              <p><strong>ลูกค้า:</strong> customer@test.com | รหัส: password123</p>
-              <p><strong>ลูกค้า:</strong> malee@gmail.com | รหัส: testpass</p>
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
