@@ -701,13 +701,12 @@ export const productService = {
 
       // Define category icons and colors with updated emojis
       const categoryConfig: Record<string, { icon: string; color: string }> = {
-        'ผลไม้': { icon: '🍇', color: 'bg-purple-100 text-purple-700' },
-        'ผัก': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
-        'ผักใบเขียว': { icon: '🥕', color: 'bg-green-100 text-green-700' }, // Fresh Vegetables
-        'ข้าว': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
-        'ไข่': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
-        'ผลไม้นอกฤดู': { icon: '❄️', color: 'bg-pink-100 text-pink-700' }, // Out-of-season Products
-        'สมุนไพร': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' }
+        'fruits': { icon: '🍇', color: 'bg-purple-100 text-purple-700' },
+        'fresh vegetables': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
+        'rice': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
+        'eggs': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
+        'out-of-season products': { icon: '❄️', color: 'bg-pink-100 text-pink-700' }, // Out-of-season Products
+        'herbs': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' }
       };
 
       // Convert to CategoryWithCount array
