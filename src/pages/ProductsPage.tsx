@@ -614,6 +614,7 @@ export const ProductsPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-1">
               <span>🌿</span>
+              <Star className="w-4 h-4" />
               <span>{filteredProducts.filter(p => p.organic).length} ออร์แกนิค</span>
             </div>
           </div>

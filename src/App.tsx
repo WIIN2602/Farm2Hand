@@ -28,30 +28,25 @@ const AuthenticatedLanding: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <div className="min-h-screen bg-gradient-to-br from-soft-beige to-light-beige">
-          <Navigation />
-          <Routes>
-            <Route path="/" element={<AuthenticatedLanding />} />
-            <Route path="/products" element={<ProductsPage />} />
-            <Route 
-              path="/profile" 
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="/chatbot" element={<ChatbotPage />} />
-          </Routes>
-          
-          {/* Floating Chatbot - Available on all pages */}
-          <ChatbotPopup />
-          
-          {/* Cart Sidebar */}
-          <CartSidebar />
-        </div>
-      </CartProvider>
+      <div className="min-h-screen bg-gradient-to-br from-soft-beige to-light-beige">
+        <Navigation />
+        <Routes>
+          <Route path="/" element={<AuthenticatedLanding />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/chatbot" element={<ChatbotPage />} />
+        </Routes>
+        
+        {/* Floating Chatbot - Available on all pages */}
+        <ChatbotPopup />
+      </div>
     </AuthProvider>
   );
 }

@@ -143,7 +143,7 @@ export const HomePage: React.FC = () => {
       setCategories(categoriesData);
     } catch (error) {
       console.error('Failed to load categories:', error);
-      // Fallback to static categories if database fails with corrected emojis
+      // Fallback to static categories if database fails with updated emojis
       setCategories([
         { name: 'ผลไม้', icon: '🍇', count: 0, color: 'bg-purple-100 text-purple-700' },
         { name: 'ผัก', icon: '🥕', count: 0, color: 'bg-orange-100 text-orange-700' },
