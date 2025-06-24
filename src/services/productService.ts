@@ -707,8 +707,7 @@ export const productService = {
         'ข้าว': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
         'ไข่': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
         'ผลไม้นอกฤดู': { icon: '❄️', color: 'bg-pink-100 text-pink-700' }, // Out-of-season Products
-        'สมุนไพร': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' },
-        'อื่นๆ': { icon: '🛒', color: 'bg-gray-100 text-gray-700' }
+        'สมุนไพร': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' }
       };
 
       // Convert to CategoryWithCount array
