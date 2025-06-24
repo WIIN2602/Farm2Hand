@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { customerService } from '../services/customerService';
 import { productService, type Product, type CategoryWithCount } from '../services/productService';
+import { AddToCartPopup } from '../components/AddToCartPopup';
 
 interface FilterOptions {
   category: string;
@@ -31,6 +32,10 @@ export const ProductsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteLoading, setFavoriteLoading] = useState<string | null>(null);
+  
+  // Add to cart popup state
+  const [showAddToCartPopup, setShowAddToCartPopup] = useState(false);
+  const [addedProduct, setAddedProduct] = useState<{ name: string; image: string } | null>(null);
   
   const [filters, setFilters] = useState<FilterOptions>({
     category: 'ทั้งหมด',
@@ -195,7 +200,21 @@ export const ProductsPage: React.FC = () => {
 
   const handleAddToCart = (product: Product) => {
     if (!product.inStock) return;
+    
+    // Add to cart
     addToCart(product);
+    
+    // Show success popup
+    setAddedProduct({
+      name: product.name,
+      image: product.image
+    });
+    setShowAddToCartPopup(true);
+  };
+
+  const handleClosePopup = () => {
+    setShowAddToCartPopup(false);
+    setAddedProduct(null);
   };
 
   const handleCategoryClick = (categoryName: string) => {
@@ -355,9 +374,9 @@ export const ProductsPage: React.FC = () => {
           <button
             onClick={() => handleAddToCart(product)}
             disabled={!product.inStock}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
               product.inStock
-                ? 'bg-nature-green hover:bg-nature-dark-green text-white'
+                ? 'bg-nature-green hover:bg-nature-dark-green text-white hover:shadow-md transform hover:scale-105'
                 : 'bg-cool-gray/20 text-cool-gray cursor-not-allowed'
             }`}
           >
@@ -652,6 +671,14 @@ export const ProductsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Add to Cart Success Popup */}
+      <AddToCartPopup
+        isVisible={showAddToCartPopup}
+        productName={addedProduct?.name || ''}
+        productImage={addedProduct?.image || ''}
+        onClose={handleClosePopup}
+      />
     </div>
   );
 };
