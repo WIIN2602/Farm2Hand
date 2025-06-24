@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, CreditCard, Truck, MapPin, Phone, User, FileText, CheckCircle } from 'lucide-react';
+import { X, CreditCard, Truck, MapPin, Phone, User, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { orderService } from '../services/orderService';
 import type { CartItem, ShippingInfo, PaymentMethod } from '../types/cart';
 
 interface CheckoutModalProps {
@@ -43,6 +44,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPayment, setSelectedPayment] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [orderNumber, setOrderNumber] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
   
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
     fullName: user?.name || '',
@@ -71,29 +74,61 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   const handleSubmitOrder = async () => {
+    if (!user) {
+      setError('กรุณาเข้าสู่ระบบก่อนทำการสั่งซื้อ');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
     
-    // Simulate order processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setLoading(false);
-    setCurrentStep(4); // Success step
-    
-    // Auto close after 3 seconds
-    setTimeout(() => {
-      onComplete();
-      setCurrentStep(1);
-      setSelectedPayment('');
-      setShippingInfo({
-        fullName: user?.name || '',
-        phone: user?.phone || '',
-        address: '',
-        district: '',
-        province: '',
-        postalCode: '',
-        notes: ''
+    try {
+      // Create order
+      const order = await orderService.createOrder(user.id, {
+        cartItems,
+        shippingInfo,
+        paymentMethod: selectedPayment as any,
+        notes: shippingInfo.notes
       });
-    }, 3000);
+
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Process payment
+      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await orderService.processPayment(order.id, user.id, transactionId);
+
+      setOrderNumber(order.orderNumber);
+      setCurrentStep(4); // Success step
+      
+      // Auto close after 5 seconds
+      setTimeout(() => {
+        onComplete();
+        resetForm();
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      setError(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการสร้างคำสั่งซื้อ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setCurrentStep(1);
+    setSelectedPayment('');
+    setOrderNumber('');
+    setError(null);
+    setShippingInfo({
+      fullName: user?.name || '',
+      phone: user?.phone || '',
+      address: '',
+      district: '',
+      province: '',
+      postalCode: '',
+      notes: ''
+    });
   };
 
   const isStep1Valid = shippingInfo.fullName && shippingInfo.phone && shippingInfo.address && 
@@ -119,6 +154,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </button>
           )}
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
 
         {/* Progress Steps */}
         {currentStep !== 4 && (
@@ -366,11 +408,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </p>
               <div className="bg-nature-green/10 rounded-lg p-4 mb-4">
                 <p className="text-sm text-nature-dark-green">
-                  หมายเลขคำสั่งซื้อ: <strong>ORD-{Date.now()}</strong>
+                  หมายเลขคำสั่งซื้อ: <strong>{orderNumber}</strong>
                 </p>
               </div>
               <p className="text-sm text-cool-gray">
-                หน้าต่างนี้จะปิดอัตโนมัติใน 3 วินาที...
+                หน้าต่างนี้จะปิดอัตโนมัติใน 5 วินาที...
               </p>
             </div>
           )}
@@ -381,7 +423,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="flex justify-between items-center p-6 border-t border-border-beige">
             <button
               onClick={currentStep === 1 ? onClose : handlePrevStep}
-              className="px-6 py-2 border border-border-beige text-cool-gray hover:bg-soft-beige/30 rounded-lg font-medium transition-colors duration-200"
+              disabled={loading}
+              className="px-6 py-2 border border-border-beige text-cool-gray hover:bg-soft-beige/30 disabled:opacity-50 rounded-lg font-medium transition-colors duration-200"
             >
               {currentStep === 1 ? 'ยกเลิก' : 'ย้อนกลับ'}
             </button>
@@ -397,7 +440,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   กำลังดำเนินการ...
                 </>
               ) : currentStep === 3 ? (
