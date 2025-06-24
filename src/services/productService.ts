@@ -699,23 +699,46 @@ export const productService = {
         return acc;
       }, {} as Record<string, number>);
 
-      // Define category icons and colors with updated emojis
+      // Define category icons and colors - matching actual database values
       const categoryConfig: Record<string, { icon: string; color: string }> = {
-        'fruits': { icon: '🍇', color: 'bg-purple-100 text-purple-700' },
-        'fresh vegetables': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
-        'rice': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
-        'eggs': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
-        'out-of-season products': { icon: '❄️', color: 'bg-pink-100 text-pink-700' }, // Out-of-season Products
-        'herbs': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' }
+        // English categories (from database)
+        'Fruits': { icon: '🍇', color: 'bg-purple-100 text-purple-700' },
+        'Fresh Vegetables': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
+        'Rice': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
+        'Eggs': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
+        'Out-of-Season Products': { icon: '❄️', color: 'bg-pink-100 text-pink-700' },
+        
+        // Thai categories (fallback)
+        'ผลไม้': { icon: '🍇', color: 'bg-purple-100 text-purple-700' },
+        'ผัก': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
+        'ผักใบเขียว': { icon: '🥕', color: 'bg-green-100 text-green-700' },
+        'ข้าว': { icon: '🌾', color: 'bg-yellow-100 text-yellow-700' },
+        'ไข่': { icon: '🥚', color: 'bg-blue-100 text-blue-700' },
+        'ผลไม้นอกฤดู': { icon: '❄️', color: 'bg-pink-100 text-pink-700' },
+        'สมุนไพร': { icon: '🌿', color: 'bg-emerald-100 text-emerald-700' },
+        'อื่นๆ': { icon: '🛒', color: 'bg-gray-100 text-gray-700' }
       };
 
       // Convert to CategoryWithCount array
-      const categoriesWithCounts: CategoryWithCount[] = Object.entries(categoryCountMap).map(([name, count]) => ({
-        name,
-        count,
-        icon: categoryConfig[name]?.icon || '🛒',
-        color: categoryConfig[name]?.color || 'bg-gray-100 text-gray-700'
-      }));
+      const categoriesWithCounts: CategoryWithCount[] = Object.entries(categoryCountMap).map(([name, count]) => {
+        // Try exact match first, then case-insensitive match
+        let config = categoryConfig[name];
+        if (!config) {
+          // Try case-insensitive match
+          const lowerName = name.toLowerCase();
+          const matchingKey = Object.keys(categoryConfig).find(key => 
+            key.toLowerCase() === lowerName
+          );
+          config = matchingKey ? categoryConfig[matchingKey] : null;
+        }
+        
+        return {
+          name,
+          count,
+          icon: config?.icon || '🛒',
+          color: config?.color || 'bg-gray-100 text-gray-700'
+        };
+      });
 
       // Sort by count (descending) then by name
       categoriesWithCounts.sort((a, b) => {
