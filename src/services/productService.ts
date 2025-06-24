@@ -699,7 +699,7 @@ export const productService = {
         return acc;
       }, {} as Record<string, number>);
 
-      // Define category icons and colors with corrected emojis
+      // Define category icons and colors with updated emojis
       const categoryConfig: Record<string, { icon: string; color: string }> = {
         'ผลไม้': { icon: '🍇', color: 'bg-purple-100 text-purple-700' },
         'ผัก': { icon: '🥕', color: 'bg-orange-100 text-orange-700' },
